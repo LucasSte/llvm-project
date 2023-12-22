@@ -54,8 +54,8 @@ def SBFIsBigEndian    : Predicate<"!CurDAG->getDataLayout().isLittleEndian()">;
 def SBFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
 def SBFNoALU32 : Predicate<"!Subtarget->getHasAlu32()">;
 def SBFSubtargetSolana : Predicate<"Subtarget->isSolana()">;
-def SBFv2 : Predicate<"Subtarget->isSBFv2()">;
-def NoSBFv2 : Predicate<"!Subtarget->isSBFv2()">;
+def SBFv2 : Predicate<"!Subtarget->isSBFv2()">;
+def NoSBFv2 : Predicate<"Subtarget->isSBFv2()">;
 
 def brtarget : Operand<OtherVT> {
   let PrintMethod = "printBrTargetOperand";

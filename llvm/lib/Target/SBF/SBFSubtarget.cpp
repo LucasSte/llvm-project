@@ -39,7 +39,7 @@ void SBFSubtarget::initializeEnvironment(const Triple &TT) {
   HasJmpExt = false;
   HasJmp32 = false;
   HasAlu32 = false;
-  HasDynamicFrames = false;
+  HasDynamicFrames = true;
   HasSdiv = false;
   UseDwarfRIS = false;
   IsSBFv2 = false;
