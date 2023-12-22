@@ -67,8 +67,7 @@ void SBFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   if (CPU == "sbfv2") {
     IsSBFv2 = true;
-    if (!HasDynamicFrames)
-      report_fatal_error("sbfv2 requires dynamic-frames\n", false);
+    report_fatal_error("sbfv2 requires dynamic-frames\n", false);
   }
 }
 
