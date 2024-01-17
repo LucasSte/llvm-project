@@ -966,15 +966,14 @@ def : Pat<(SBFWrapper tglobaladdr:$in),
         (HOR_addr (MOV_32_64_addr tglobaladdr:$in),
                             tglobaladdr:$in)>, Requires<[SBFNoLddw]>;
 
+def : Pat<(i64 (sext GPR32:$src)), (MOV_32_64 GPR32:$src)>;
 
-def : Pat<(i64 (sext GPR32:$src)),
-          (SRA_ri (SLL_ri (MOV_32_64 GPR32:$src), 32), 32)>;
+def : Pat<(i64 (zext GPR32:$src)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$src, sub_32)>;
 
-def : Pat<(i64 (zext GPR32:$src)), (MOV_32_64 GPR32:$src)>;
-
-// For i64 -> i32 truncation, use the 32-bit subregister directly.
+// For i64 -> i32 truncation, use a bit mask.
 def : Pat<(i32 (trunc GPR:$src)),
-          (i32 (EXTRACT_SUBREG GPR:$src, sub_32))>;
+          (i32 (EXTRACT_SUBREG (AND_ri GPR:$src, 0xffffffff), sub_32))>;
 
 // For i32 -> i64 anyext, we don't care about the high bits.
 def : Pat<(i64 (anyext GPR32:$src)),

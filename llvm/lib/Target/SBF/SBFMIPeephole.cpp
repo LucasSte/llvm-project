@@ -73,9 +73,9 @@ public:
     // First try to eliminate (zext, lshift, rshift) and then
     // try to eliminate zext.
     bool ZExtSeqExist, ZExtExist;
-    ZExtSeqExist = eliminateZExtSeq();
-    ZExtExist = eliminateZExt();
-    return ZExtSeqExist || ZExtExist;
+//    ZExtSeqExist = eliminateZExtSeq();
+//    ZExtExist = eliminateZExt();
+    return false; //ZExtSeqExist || ZExtExist;
   }
 };
 
