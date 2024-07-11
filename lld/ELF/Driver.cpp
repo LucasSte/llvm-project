@@ -67,6 +67,9 @@
 #include <cstdlib>
 #include <tuple>
 #include <utility>
+#include <iostream>
+#include <iostream>
+#include <fstream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -2664,6 +2667,22 @@ void LinkerDriver::link(opt::InputArgList &args) {
       parseArmCMSEImportLib(*armCmseImpLib);
   }
 
+  std::ofstream myfile ("/Users/lucasste/Documents/overflow-repro/tube.txt");
+  if (config->emachine == EM_BPF) {
+    myfile << "Target BPF \n";
+  } else if (config->emachine == EM_SBF) {
+    myfile << "Target SBF \n";
+  } else {
+    myfile << "Target Other";
+  }
+
+  if (myfile.is_open()) {
+      for (const Symbol * sb : symtab.getSymbols()) {
+          myfile << "Symbol: " << sb->getName().str() << "\n";
+      }
+      myfile.close();
+  }
+
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
   // We need one if we were asked to export dynamic symbols or if we are
@@ -2925,12 +2944,21 @@ void LinkerDriver::link(opt::InputArgList &args) {
   invokeELFT(markLive,);
   demoteSharedAndLazySymbols();
 
-for (const Symbol * sb : symtab.getSymbols()) {
-  if (!sb->isUndefined()) {
-    dbgs() << "Not undefined symbol: " << sb->getName() << "\n";
-  }
-}
-report_fatal_error("Going to crash!");
+//std::ofstream myfile ("/Users/lucasste/Documents/overflow-repro/tube.txt");
+//if (myfile.is_open()) {
+//    for (const Symbol * sb : symtab.getSymbols()) {
+//        myfile << "Symbol: " << sb->getName().str() << "\n";
+//    }
+//    myfile.close();
+//}
+//if (config->emachine == EM_SBF) {
+//    report_fatal_error("Going to crash! SBF");
+//} else if (config->emachine == EM_AARCH64) {
+//    report_fatal_error("Crashiing ARM!");
+//} else if (config->emachine == EM_BPF) {
+//    report_fatal_error("Crashing BPF");
+//}
+
 
 
   // Make copies of any input sections that need to be copied into each

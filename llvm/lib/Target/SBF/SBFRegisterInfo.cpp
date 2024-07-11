@@ -62,6 +62,15 @@ static void WarnSize(int Offset, MachineFunction &MF, DebugLoc& DL)
              << " Stack offset of " << -Offset << " exceeded max offset of "
              << -MaxOffset << " by " << MaxOffset - Offset
              << " bytes, please minimize large stack variables\n";
+
+      dbgs() << "The Vvisibility is: " << (int)MF.getFunction().getVCallVisibility()
+        << "The other is: " << (int)MF.getFunction().getVisibility() << "\n";
+
+        //if (MF.getFunction().getLinkage() == GlobalValue::LinkageTypes::InternalLinkage) {
+                   Twine NewName = MF.getFunction().getName() + "invalid";
+                   MF.getFunction().setName(NewName);
+        //}
+              dbgs() << "The linkage is: " << (int)MF.getFunction().getLinkage() << "\n";
     } else {
       DiagnosticInfoUnsupported DiagStackSize(
           MF.getFunction(),

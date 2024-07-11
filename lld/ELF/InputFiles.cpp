@@ -30,6 +30,7 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -276,7 +277,7 @@ static bool isCompatible(InputFile *file) {
   std::string with;
   if (existing)
     with = " with " + toString(existing);
-  error(toString(file) + " is incompatible" + with);
+  error(toString(file) + " is incompatible");
   return false;
 }
 
