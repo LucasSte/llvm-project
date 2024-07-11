@@ -2925,6 +2925,13 @@ void LinkerDriver::link(opt::InputArgList &args) {
   invokeELFT(markLive,);
   demoteSharedAndLazySymbols();
 
+for (const Symbol * sb : symtab.getSymbols()) {
+  if (!sb->isUndefined()) {
+    dbgs() << "Not undefined symbol: " << sb->getName() << "\n";
+  }
+}
+
+
   // Make copies of any input sections that need to be copied into each
   // partition.
   copySectionsIntoPartitions();

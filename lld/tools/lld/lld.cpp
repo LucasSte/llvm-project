@@ -88,6 +88,8 @@ static void initLLVM() {
 }
 
 int lld_main(int argc, char **argv, const llvm::ToolContext &) {
+    dbgs() << "I AM HERE!!!" << "\n";
+    //report_fatal_error("Puts!");
   initLLVM();
   InitLLVM x(argc, argv);
   sys::Process::UseANSIEscapeCodes(true);
