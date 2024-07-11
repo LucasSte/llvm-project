@@ -2930,6 +2930,7 @@ for (const Symbol * sb : symtab.getSymbols()) {
     dbgs() << "Not undefined symbol: " << sb->getName() << "\n";
   }
 }
+report_fatal_error("Going to crash!");
 
 
   // Make copies of any input sections that need to be copied into each
