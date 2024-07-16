@@ -68,7 +68,8 @@ static void WarnSize(int Offset, MachineFunction &MF, DebugLoc& DL)
 
         //if (MF.getFunction().getLinkage() == GlobalValue::LinkageTypes::InternalLinkage) {
                    Twine NewName = MF.getFunction().getName() + "invalid";
-                   MF.getFunction().setName(NewName);
+                   //MF.getFunction().setName(NewName);
+                   MF.getFunction().setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
         //}
               dbgs() << "The linkage is: " << (int)MF.getFunction().getLinkage() << "\n";
     } else {

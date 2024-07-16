@@ -68,7 +68,6 @@
 #include <tuple>
 #include <utility>
 #include <iostream>
-#include <iostream>
 #include <fstream>
 
 using namespace llvm;
@@ -2667,7 +2666,23 @@ void LinkerDriver::link(opt::InputArgList &args) {
       parseArmCMSEImportLib(*armCmseImpLib);
   }
 
-  std::ofstream myfile ("/Users/lucasste/Documents/overflow-repro/tube.txt");
+  std::ofstream anotherfile ("/Users/lucasste/Documents/overflow-repro/tube3.txt", std::ios_base::app);
+      anotherfile << "New case\n";
+      for (InputFile *file : files)
+          if (file)
+          for (Symbol *sym : file->getSymbols())
+              if (sym)
+                  anotherfile << sym->getName().str() << "\n";
+
+std::ofstream otherfile ("/Users/lucasste/Documents/overflow-repro/tube2.txt", std::ios_base::app);
+    otherfile << "New case\n";
+    for (ELFFileBase *file : ctx.objectFiles)
+        if (file)
+        for (Symbol *sym : file->getSymbols())
+            if (sym)
+                otherfile << sym->getName().str() << "\n";
+
+  std::ofstream myfile ("/Users/lucasste/Documents/overflow-repro/tube.txt", std::ios_base::app);
   if (config->emachine == EM_BPF) {
     myfile << "Target BPF \n";
   } else if (config->emachine == EM_SBF) {
@@ -2742,6 +2757,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
+
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.

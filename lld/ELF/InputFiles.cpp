@@ -31,6 +31,7 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
+#include <fstream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1127,6 +1128,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
   for (size_t i = 0, end = firstGlobal; i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     uint32_t secIdx = eSym.st_shndx;
+    Expected<StringRef> exp_name = eSym.getName(this->getStringTable());
     if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
       secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
     else if (secIdx >= SHN_LORESERVE)
