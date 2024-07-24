@@ -80,9 +80,11 @@ SBFTargetLowering::SBFTargetLowering(const TargetMachine &TM,
 
   for (auto VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
     if (Subtarget->isSolana()) {
+      // atomic load, store, and swap?
       // Implement custom lowering for all atomic operations
       setOperationAction(ISD::ATOMIC_SWAP, VT, Custom);
       setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Custom);
+      setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, Custom);
       setOperationAction(ISD::ATOMIC_LOAD_ADD, VT, Custom);
       setOperationAction(ISD::ATOMIC_LOAD_AND, VT, Custom);
       setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, Custom);
@@ -312,6 +314,7 @@ void SBFTargetLowering::ReplaceNodeResults(SDNode *N,
     report_fatal_error("Unhandled custom legalization");
   case ISD::ATOMIC_SWAP:
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
+  case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_LOAD_ADD:
   case ISD::ATOMIC_LOAD_AND:
   case ISD::ATOMIC_LOAD_MAX:
@@ -348,6 +351,7 @@ SDValue SBFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSELECT_CC(Op, DAG);
   case ISD::ATOMIC_SWAP:
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
+  case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_LOAD_ADD:
   case ISD::ATOMIC_LOAD_AND:
   case ISD::ATOMIC_LOAD_MAX:
@@ -918,6 +922,9 @@ SDValue SBFTargetLowering::LowerATOMICRMW(SDValue Op, SelectionDAG &DAG) const {
         DAG.getBoolConstant(false, DL, RetFlagVT, RetFlagVT), ISD::SETEQ);
     break;
   }
+  case ISD::ATOMIC_CMP_SWAP:
+    NewVal = DAG.getSelectCC(DL, Load, Cmp, Val, Load, ISD::SETEQ);
+    break;
   case ISD::ATOMIC_LOAD_ADD:
     NewVal = DAG.getNode(ISD::ADD, DL, ValVT, Load, Val);
     break;
