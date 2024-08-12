@@ -1754,7 +1754,7 @@ static void setConfigs(opt::InputArgList &args) {
   // builds and disabled otherwise. This check is enabled when writeAddends is
   // true.
 #ifndef NDEBUG
-  bool checkDynamicRelocsDefault = true;
+  bool checkDynamicRelocsDefault = m != EM_BPF && m != EM_SBF;
 #else
   bool checkDynamicRelocsDefault = false;
 #endif
