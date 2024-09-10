@@ -44,7 +44,7 @@ void SBFSubtarget::initializeEnvironment(const Triple &TT) {
   HasDynamicFrames = false;
   DisableNeg = false;
   ReverseSubImm = false;
-  NoLddw = false;
+  NoLddw = true;
   CallxRegSrc = false;
   HasPqrClass = false;
   NewCallConvention = false;

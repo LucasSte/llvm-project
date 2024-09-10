@@ -29,7 +29,7 @@ public:
         isSBFv2(STI.getCPU() == "sbfv2"),
         isSolana(STI.hasFeature(SBF::FeatureSolana) ||
                  STI.getTargetTriple().getArch() == Triple::sbf),
-        relocAbs64(STI.hasFeature(SBF::FeatureRelocAbs64)) {}
+        relocAbs64(true) {}
   ~SBFAsmBackend() override = default;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
