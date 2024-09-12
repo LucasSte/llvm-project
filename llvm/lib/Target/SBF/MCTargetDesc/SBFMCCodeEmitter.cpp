@@ -101,9 +101,9 @@ unsigned SBFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     const MCSymbolRefExpr * SymbolExpr = dyn_cast<MCSymbolRefExpr>(Expr);
     const MCSymbol& Sym = SymbolExpr->getSymbol();
     if (Sym.isInSection()) {
-      Fixups.push_back(MCFixup::create(0, Expr, FK_SecRel_8));
-    } else {
       Fixups.push_back(MCFixup::create(0, Expr, FK_Data_8));
+    } else {
+      Fixups.push_back(MCFixup::create(0, Expr, FK_SecRel_8));
     }
 //    std::cout << "Name: " << MySym.getName().str() << std::endl;
 //    std::cout << "Is absolute: " << MySym.isAbsolute() << std::endl;
