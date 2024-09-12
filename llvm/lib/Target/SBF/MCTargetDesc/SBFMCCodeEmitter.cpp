@@ -19,10 +19,13 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/MC/MCSymbol.h"
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 
 using namespace llvm;
 
@@ -94,8 +97,21 @@ unsigned SBFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     // func call name
     Fixups.push_back(MCFixup::create(0, Expr, FK_PCRel_4));
   else if (MI.getOpcode() == SBF::LD_imm64 ||
-           MI.getOpcode() == SBF::MOV_32_64_addr)
-    Fixups.push_back(MCFixup::create(0, Expr, FK_SecRel_8));
+           MI.getOpcode() == SBF::MOV_32_64_addr) {
+    const MCSymbolRefExpr * SymbolExpr = dyn_cast<MCSymbolRefExpr>(Expr);
+    const MCSymbol& Sym = SymbolExpr->getSymbol();
+    if (Sym.isInSection()) {
+      Fixups.push_back(MCFixup::create(0, Expr, FK_SecRel_8));
+    } else {
+      Fixups.push_back(MCFixup::create(0, Expr, FK_Data_8));
+    }
+//    std::cout << "Name: " << MySym.getName().str() << std::endl;
+//    std::cout << "Is absolute: " << MySym.isAbsolute() << std::endl;
+//    std::cout << "Defined in some section: " << MySym.isInSection() << std::endl;
+//    std::cout << "Is this a data section: " << SK.isData() << std::endl;
+//    std::cout << "Is this a text section: " << SK.isText() << std::endl;
+    //Fixups.push_back(MCFixup::create(0, Expr, FK_SecRel_8));
+  }
   // In SBFv2, LD_imm64 is replaced by MOV_32_64_addr and HOR_addr when loading
   // addresses. These two instructions always appear together, so if a
   // relocation is necessary, we only insert it for one of them, in this case
