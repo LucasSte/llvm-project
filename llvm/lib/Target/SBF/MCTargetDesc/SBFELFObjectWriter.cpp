@@ -74,6 +74,8 @@ unsigned SBFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     return ELF::R_SBF_NONE;
   case FK_Data_8:
     return (isSolana && !relocAbs64) ? ELF::R_SBF_64_64 : ELF::R_SBF_64_ABS64;
+  case FK_GPRel_8:
+    return ELF::R_SBF_SEC;
   case FK_Data_4:
     if (const MCSymbolRefExpr *A = Target.getSymA()) {
       const MCSymbol &Sym = A->getSymbol();
