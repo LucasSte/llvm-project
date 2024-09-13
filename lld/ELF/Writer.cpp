@@ -31,6 +31,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <climits>
+#include <iostream>
 
 #define DEBUG_TYPE "lld"
 
@@ -2235,6 +2236,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // 3) Assign the final values for the linker script symbols. Linker scripts
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
+  std::cout << "Finalizing address dependent" << std::endl;
   finalizeAddressDependentContent();
 
   // All information needed for OutputSection part of Map file is available.
@@ -3035,10 +3037,26 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   }
 
   // Finally, check that all dynamic relocation addends were written correctly.
-  if (config->checkDynamicRelocs && config->writeAddends) {
+  if (config->writeAddends) {
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+      if (sec->type == SHT_REL || sec->type == SHT_RELA || sec->name == ".dynsym")
         sec->checkDynRelAddends(Out::bufferStart);
+  }
+  if (config->emachine == EM_BPF && config->sectionStartMap.contains(".text")) {
+    std::cout << "Can apply" << std::endl;
+    uint64_t start;
+    uint64_t end;
+    for (OutputSection *sec: outputSections) {
+      std::cout << "Name: " << sec->name.str() << std::endl;
+      if (sec->name == ".text") {
+        if (sec->type == SHT_NOBITS) {
+          start = end = 0;
+        } else {
+          start = sec->offset;
+          end = start + sec->size;
+        }
+      }
+    }
   }
 }
 

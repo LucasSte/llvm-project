@@ -21,6 +21,8 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <iostream>
+
 #if LLVM_ENABLE_ZLIB
 // Avoid introducing max as a macro from Windows headers.
 #define NOMINMAX
@@ -729,9 +731,9 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
   return {0, 0, 0, 0};
 }
 
-void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
-  assert(config->writeAddends && config->checkDynamicRelocs);
-  assert(type == SHT_REL || type == SHT_RELA);
+void OutputSection::checkDynRelAddends(uint8_t *bufStart) {
+  //assert(config->writeAddends && config->checkDynamicRelocs);
+  //assert(type == SHT_REL || type == SHT_RELA);
   SmallVector<InputSection *, 0> storage;
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   parallelFor(0, sections.size(), [&](size_t i) {
@@ -740,6 +742,12 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
     // output. We skip over those and only look at the synthetic relocation
     // sections created during linking.
     const auto *sec = dyn_cast<RelocationBaseSection>(sections[i]);
+    const auto *dsec = dyn_cast<SymbolTableBaseSection>(sections[i]);
+    if (dsec && this->name == ".dynsym") {
+      std::cout << "Has value" << std::endl;
+      std::cout << "Has " << dsec->getSymbols().size() << " symbols" << std::endl;
+    }
+    std::cout << "Continuing" << std::endl;
     if (!sec)
       return;
     for (const DynamicReloc &rel : sec->relocs) {
@@ -752,21 +760,25 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
           (rel.inputSec == in.ppc64LongBranchTarget.get() ||
            rel.inputSec == in.igotPlt.get()))
         continue;
-      const uint8_t *relocTarget =
+      uint8_t *relocTarget =
           bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
       // For SHT_NOBITS the written addend is always zero.
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
               ? 0
               : target->getImplicitAddend(relocTarget, rel.type);
-      if (addend != writtenAddend)
-        internalLinkerError(
-            getErrorLocation(relocTarget),
-            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
-                " instead of 0x" + utohexstr(addend) +
-                " for dynamic relocation " + toString(rel.type) +
-                " at offset 0x" + utohexstr(rel.getOffset()) +
-                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
+      std::cout << "the addend is: " << addend << " r_offset: " << rel.r_offset << std::endl;
+      // TODO: Perform dynamic relocations here!
+      target->relocate(relocTarget, rel, addend);
+      std::cout << "Sym tab: " << rel.r_sym << std::endl;
+//      if (addend != writtenAddend)
+//        internalLinkerError(
+//            getErrorLocation(relocTarget),
+//            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
+//                " instead of 0x" + utohexstr(addend) +
+//                " for dynamic relocation " + toString(rel.type) +
+//                " at offset 0x" + utohexstr(rel.getOffset()) +
+//                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
     }
   });
 }

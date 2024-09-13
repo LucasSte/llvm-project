@@ -13,6 +13,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Endian.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -49,6 +50,7 @@ RelExpr BPF::getRelExpr(RelType type, const Symbol &s,
     case R_BPF_64_NODYLD32:
     case R_BPF_64_ABS64:
     case R_BPF_64_64:
+    case R_BPF_SEC:
       return R_ABS;
     default:
       error(getErrorLocation(loc) + "unrecognized reloc " + toString(type));
@@ -57,24 +59,34 @@ RelExpr BPF::getRelExpr(RelType type, const Symbol &s,
 }
 
 RelType BPF::getDynRel(RelType type) const {
-  switch (type) {
-    case R_BPF_64_ABS64:
-        // R_BPF_64_ABS64 is symbolic like R_BPF_64_64, which is set as our
-        // symbolicRel in the constructor. Return R_BPF_64_64 here so that if
-        // the symbol isn't preemptible, we emit a _RELATIVE relocation instead
-        // and skip emitting the symbol.
-        //
-        // See https://github.com/anza-xyz/llvm-project/blob/6b6aef5dbacef31a3c7b3a54f7f1ba54cafc7077/lld/ELF/Relocations.cpp#L1179
-        return R_BPF_64_64;
-    default:
-        return type;
-  }
+//  switch (type) {
+//    case R_BPF_64_ABS64:
+//        // R_BPF_64_ABS64 is symbolic like R_BPF_64_64, which is set as our
+//        // symbolicRel in the constructor. Return R_BPF_64_64 here so that if
+//        // the symbol isn't preemptible, we emit a _RELATIVE relocation instead
+//        // and skip emitting the symbol.
+//        //
+//        // See https://github.com/anza-xyz/llvm-project/blob/6b6aef5dbacef31a3c7b3a54f7f1ba54cafc7077/lld/ELF/Relocations.cpp#L1179
+//        return R_BPF_64_64;
+//    default:
+//        return type;
+//  }
+    return type;
 }
 
 int64_t BPF::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_BPF_64_ABS32:
     return SignExtend64<32>(read32le(buf));
+  case R_BPF_64_64:
+  case R_BPF_SEC: {
+    uint64_t low = static_cast<uint64_t>(read32le(buf+4));
+    uint64_t high = static_cast<uint64_t>(read32le(buf+12));
+    return (high << 32) | low;
+  }
+  case R_BPF_64_ABS64: {
+    return read64le(buf);
+  }
   default:
     return 0;
   }
@@ -82,6 +94,7 @@ int64_t BPF::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void BPF::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  std::cout << "Calling BPF relocate" << std::endl;
   switch (rel.type) {
     case R_BPF_64_32: {
       // Relocation of a symbol
@@ -94,7 +107,8 @@ void BPF::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       write32le(loc, val & 0xFFFFFFFF);
       break;
     }
-    case R_BPF_64_64: {
+    case R_BPF_64_64:
+    case R_BPF_SEC: {
       // Relocation of a lddw instruction
       // 64 bit address is divided into the imm of this and the following
       // instructions, lower 32 first.

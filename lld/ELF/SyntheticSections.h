@@ -31,6 +31,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Threading.h"
+#include <iostream>
 
 namespace lld::elf {
 class Defined;
@@ -527,6 +528,7 @@ public:
                 RelType addendRelType) {
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
+    std::cout << "The addend to add is " << addend << std::endl;
     if (config->writeAddends && (expr != R_ADDEND || addend != 0))
       sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
     addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});

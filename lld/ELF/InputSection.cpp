@@ -24,6 +24,7 @@
 #include <mutex>
 #include <optional>
 #include <vector>
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1053,6 +1054,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
     adjustSplitStackFunctionPrologues<ELFT>(buf, bufEnd);
 
   if (flags & SHF_ALLOC) {
+    std::cout << "Calling from input section" << std::endl;
     target->relocateAlloc(*this, buf);
     return;
   }

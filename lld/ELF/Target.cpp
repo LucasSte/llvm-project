@@ -31,6 +31,7 @@
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -161,20 +162,24 @@ RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
 }
 
 void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  std::cout << "Rellocate alloc" << std::endl;
   const unsigned bits = config->is64 ? 64 : 32;
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
+  std::cout << "relocs size: " << sec.relocs().size() << std::endl;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(
         sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
                              secAddr + rel.offset, *rel.sym, rel.expr),
         bits);
-    if (rel.expr != R_RELAX_HINT)
+    if (rel.expr != R_RELAX_HINT) {
+      std::cout << "Calling relocate from alloc!" << std::endl;
       relocate(loc, rel, val);
+    }
   }
 }
 

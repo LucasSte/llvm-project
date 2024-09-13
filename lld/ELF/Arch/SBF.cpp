@@ -13,6 +13,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Endian.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -82,6 +83,7 @@ int64_t SBF::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void SBF::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  std::cout << "Calling SBF relocate" << std::endl;
   switch (rel.type) {
     case R_SBF_64_32: {
       // Relocation of a symbol

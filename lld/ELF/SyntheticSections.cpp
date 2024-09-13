@@ -40,6 +40,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cstdlib>
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -1575,13 +1576,15 @@ uint64_t DynamicReloc::getOffset() const {
 }
 
 int64_t DynamicReloc::computeAddend() const {
+  std::cout << "Computing Addend" << std::endl;
   switch (kind) {
   case AddendOnly:
     assert(sym == nullptr);
     return addend;
   case AgainstSymbol:
     assert(sym != nullptr);
-    return addend;
+    std::cout << "Sym offset " << sym->getVA()  << " returning " << addend << std::endl;
+    return addend + sym->getVA();
   case AddendOnlyWithTargetVA:
   case AgainstSymbolWithTargetVA: {
     uint64_t ca = InputSection::getRelocTargetVA(inputSec->file, type, addend,

@@ -36,6 +36,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -172,6 +173,7 @@ void LinkerScript::expandOutputSection(uint64_t size) {
 }
 
 void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
+  std::cout << "Setting dot" << std::endl;
   uint64_t val = e().getValue();
   // If val is smaller and we are in an output section, record the error and
   // report it if this is the last assignAddresses iteration. dot may be smaller
@@ -999,6 +1001,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     else
       dot = state->tbssAddr;
   } else {
+    std::cout << "Call assign offsets" << std::endl;
     if (state->memRegion)
       dot = state->memRegion->curPos;
     if (sec->addrExpr)
@@ -1366,6 +1369,7 @@ const Defined *LinkerScript::assignAddresses() {
       assign->size = dot - assign->addr;
       continue;
     }
+    std::cout << "From assign addresses" << std::endl;
     assignOffsets(&cast<OutputDesc>(cmd)->osec);
   }
 

@@ -57,6 +57,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -931,6 +932,7 @@ void elf::addGotEntry(Symbol &sym) {
 
   // Otherwise, the value is either a link-time constant or the load base
   // plus a constant.
+  std::cout << "Adding Got Entry" << std::endl;
   if (!config->isPic || isAbsolute(sym))
     in.got->addConstant({R_ABS, target->symbolicRel, off, 0, &sym});
   else
@@ -938,6 +940,7 @@ void elf::addGotEntry(Symbol &sym) {
 }
 
 static void addTpOffsetGotEntry(Symbol &sym) {
+  std::cout << "Offset Got Entry" << std::endl;
   in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
   if (!sym.isPreemptible && !config->shared) {
@@ -1139,11 +1142,14 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     RelType rel = target->getDynRel(type);
     if (oneof<R_GOT, R_LOONGARCH_GOT>(expr) ||
         (rel == target->symbolicRel && !sym.isPreemptible)) {
+      std::cout << "Process aux1" << std::endl;
       addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
       return;
     } else if (rel != 0) {
-      if (config->emachine == EM_MIPS && rel == target->symbolicRel)
+      if (config->emachine == EM_MIPS && rel == target->symbolicRel) {
         rel = target->relativeRel;
+        std::cout << "Process aux2" << std::endl;
+      }
       std::lock_guard<std::mutex> lock(relocMutex);
       sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
                                                   addend, type);
@@ -1417,10 +1423,15 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
                        ? getAddend<ELFT>(rel)
                        : target->getImplicitAddend(
                              sec->content().data() + rel.r_offset, type);
+  //uint64_t p_start = 0x100000000;
+  std::cout << "scan one sym: " << sym.getVA() << std::endl;
   if (LLVM_UNLIKELY(config->emachine == EM_MIPS))
     addend += computeMipsAddend<ELFT>(rel, expr, sym.isLocal());
   else if (config->emachine == EM_PPC64 && config->isPic && type == R_PPC64_TOC)
     addend += getPPC64TocBase();
+//  else if (config->emachine == EM_BPF && addend < p_start) {
+//    addend += p_start;
+//  }
 
   // Ignore R_*_NONE and other marker relocations.
   if (expr == R_NONE)
@@ -1744,9 +1755,11 @@ void elf::postScanRelocations() {
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);
       uint64_t off = got->getGlobalDynOffset(sym);
-      if (isLocalInExecutable)
-        // Write one to the GOT slot.
+      if (isLocalInExecutable) {
+        std::cout << "Case 3" << std::endl;
         got->addConstant({R_ADDEND, target->symbolicRel, off, 1, &sym});
+      }
+        // Write one to the GOT slot.
       else
         mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *got, off,
                                           sym);
@@ -1781,9 +1794,11 @@ void elf::postScanRelocations() {
     if (config->shared)
       mainPart->relaDyn->addReloc(
           {target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
-    else
+    else {
+      std::cout << "postScan" << std::endl;
       got->addConstant(
           {R_ADDEND, target->symbolicRel, got->getTlsIndexOff(), 1, &dummy});
+    }
   }
 
   assert(symAux.size() == 1);
