@@ -1203,6 +1203,7 @@ size_t IgotPltSection::getSize() const {
 
 void IgotPltSection::writeTo(uint8_t *buf) {
   for (const Symbol *b : entries) {
+    std::cout << "Writing igot" << std::endl;
     target->writeIgotPlt(buf, *b);
     buf += target->gotEntrySize;
   }

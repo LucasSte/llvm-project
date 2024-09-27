@@ -110,6 +110,7 @@ public:
   void writeTo(uint8_t *buf, llvm::parallel::TaskGroup &tg);
   // Check that the addends for dynamic relocations were written correctly.
   void checkDynRelAddends(uint8_t *bufStart);
+  void applySbfRelocations(uint8_t *bufStart, uint64_t start, uint64_t end);
   template <class ELFT> void maybeCompress();
 
   void sort(llvm::function_ref<int(InputSectionBase *s)> order);

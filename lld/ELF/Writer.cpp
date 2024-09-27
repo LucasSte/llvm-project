@@ -3039,7 +3039,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   // Finally, check that all dynamic relocation addends were written correctly.
   if (config->writeAddends) {
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA || sec->name == ".dynsym")
+      if (sec->type == SHT_REL || sec->type == SHT_RELA)
         sec->checkDynRelAddends(Out::bufferStart);
   }
   if (config->emachine == EM_BPF && config->sectionStartMap.contains(".text")) {
@@ -3057,6 +3057,11 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
         }
       }
     }
+    std::cout << "start at: " << start << " end at: " << end << std::endl;
+//    for (OutputSection *sec : outputSections){
+//      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+//        sec->applySbfRelocations(Out::bufferStart, start, end);
+//    }
   }
 }
 

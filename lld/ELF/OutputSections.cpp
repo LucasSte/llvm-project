@@ -731,6 +731,88 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
   return {0, 0, 0, 0};
 }
 
+void OutputSection::applySbfRelocations(uint8_t *bufStart, uint64_t start, uint64_t end) {
+  std::cout << "Applying" << std::endl;
+  const uint64_t p_start = 0x100000000;
+  SmallVector<InputSection *, 0> storage;
+  ArrayRef<InputSection *> sections = getInputSections(*this, storage);
+  for(size_t i=0; i<sections.size(); i++) {
+    const auto *sec = dyn_cast<RelocationBaseSection>(sections[i]);
+    if (!sec)
+      continue;
+    for (const DynamicReloc &rel : sec->relocs) {
+      const OutputSection *relOsec = rel.inputSec->getOutputSection();
+      switch (rel.type) {
+      case 1:
+      case 2:
+      case 9: {
+        uint64_t addr;
+        uint8_t *relocTarget =
+            bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
+        if (relOsec->offset >= start && relOsec->offset < end) {
+          uint64_t low = static_cast<uint64_t>(read32le(relocTarget+4));
+          uint64_t high = static_cast<uint64_t>(read32le(relocTarget+12));
+          addr = (high << 32) | low;
+        } else {
+          addr = read64le(relocTarget);
+        }
+        std::cout << "The addend is: " << rel.addend << std::endl;
+        addr += static_cast<uint64_t>(rel.addend);
+        if (addr < p_start) {
+          addr += p_start;
+        }
+
+        if (relOsec->offset >= start && relOsec->offset < end) {
+          std::cout << "text" << std::endl;
+          uint32_t low = static_cast<uint32_t>(addr & 0xFFFFFFFF);
+          uint32_t high = static_cast<uint32_t>(addr >> 32);
+          write32le(relocTarget+4, low);
+          write32le(relocTarget+12, high);
+        } else {
+          std::cout << "not text" << std::endl;
+          write64le(relocTarget, addr);
+        }
+        break;
+      }
+      case 8: {
+        uint64_t addr;
+        uint8_t *relocTarget =
+            bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
+        if (relOsec->offset >= start && relOsec->offset <= end) {
+          uint64_t low = static_cast<uint64_t>(read32le(relocTarget+4));
+          uint64_t high = static_cast<uint64_t>(read32le(relocTarget+12));
+          addr = (high << 32) | low;
+        } else {
+          addr = read64le(relocTarget);
+        }
+
+        if (addr < p_start) {
+          addr += p_start;
+        }
+
+        if (relOsec->offset >= start && relOsec->offset <= end) {
+          uint32_t low = static_cast<uint32_t>(addr & 0xFFFFFFFF);
+          uint32_t high = static_cast<uint32_t>(addr >> 32);
+          write32le(relocTarget+4, low);
+          write32le(relocTarget+12, high);
+        } else {
+          write64le(relocTarget, addr);
+        }
+        break;
+      }
+      case 10: {
+        report_fatal_error("Relocation should have already been resolved");
+        break;
+      }
+      default: {
+        std::cout << "No resolved type: " << rel.type << std::endl;
+        report_fatal_error("Unexpected relocation type");
+      }
+      }
+    }
+  }
+}
+
 void OutputSection::checkDynRelAddends(uint8_t *bufStart) {
   //assert(config->writeAddends && config->checkDynamicRelocs);
   //assert(type == SHT_REL || type == SHT_RELA);
@@ -742,12 +824,12 @@ void OutputSection::checkDynRelAddends(uint8_t *bufStart) {
     // output. We skip over those and only look at the synthetic relocation
     // sections created during linking.
     const auto *sec = dyn_cast<RelocationBaseSection>(sections[i]);
-    const auto *dsec = dyn_cast<SymbolTableBaseSection>(sections[i]);
-    if (dsec && this->name == ".dynsym") {
-      std::cout << "Has value" << std::endl;
-      std::cout << "Has " << dsec->getSymbols().size() << " symbols" << std::endl;
-    }
-    std::cout << "Continuing" << std::endl;
+//    const auto *dsec = dyn_cast<SymbolTableBaseSection>(sections[i]);
+//    if (dsec && this->name == ".dynsym") {
+//      std::cout << "Has value" << std::endl;
+//      std::cout << "Has " << dsec->getSymbols().size() << " symbols" << std::endl;
+//    }
+//    std::cout << "Continuing" << std::endl;
     if (!sec)
       return;
     for (const DynamicReloc &rel : sec->relocs) {
@@ -763,13 +845,15 @@ void OutputSection::checkDynRelAddends(uint8_t *bufStart) {
       uint8_t *relocTarget =
           bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
       // For SHT_NOBITS the written addend is always zero.
+      std::cout << "rel offset: " << relOsec->offset << std::endl;
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
               ? 0
               : target->getImplicitAddend(relocTarget, rel.type);
       std::cout << "the addend is: " << addend << " r_offset: " << rel.r_offset << std::endl;
+      std::cout << "Rel type: " << rel.type << std::endl;
       // TODO: Perform dynamic relocations here!
-      target->relocate(relocTarget, rel, addend);
+      // target->relocate(relocTarget, rel, addend);
       std::cout << "Sym tab: " << rel.r_sym << std::endl;
 //      if (addend != writtenAddend)
 //        internalLinkerError(

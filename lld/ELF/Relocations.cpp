@@ -925,6 +925,7 @@ void elf::addGotEntry(Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
+    std::cout << "Adding preemptible" << std::endl;
     mainPart->relaDyn->addReloc({target->gotRel, in.got.get(), off,
                                  DynamicReloc::AgainstSymbol, sym, 0, R_ABS});
     return;
@@ -1123,11 +1124,11 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // -shared matches the spirit of its -z undefs default. -pie has freedom on
   // choices, and we choose dynamic relocations to be consistent with the
   // handling of GOT-generating relocations.
-  if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
-      (!config->isPic && sym.isUndefWeak())) {
+  //if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
+//      (!config->isPic && sym.isUndefWeak())) {
     sec->addReloc({expr, type, offset, addend, &sym});
     return;
-  }
+  //}
 
   // Use a simple -z notext rule that treats all sections except .eh_frame as
   // writable. GNU ld does not produce dynamic relocations in .eh_frame (and our
@@ -1151,6 +1152,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         std::cout << "Process aux2" << std::endl;
       }
       std::lock_guard<std::mutex> lock(relocMutex);
+      std::cout << "ad: " << addend << " sym: " << sym.getVA() << std::endl;
       sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
                                                   addend, type);
 
@@ -1171,6 +1173,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
       if (config->emachine == EM_MIPS)
         in.mipsGot->addEntry(*sec->file, sym, addend, expr);
+      std::cout << "ret2" << std::endl;
       return;
     }
   }
@@ -1195,6 +1198,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         sym.setFlags(NEEDS_COPY);
       }
       sec->addReloc({expr, type, offset, addend, &sym});
+      std::cout << "Ret 1" << std::endl;
       return;
     }
 
@@ -1232,6 +1236,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                     getLocation(*sec, sym, offset));
       sym.setFlags(NEEDS_COPY | NEEDS_PLT);
       sec->addReloc({expr, type, offset, addend, &sym});
+      std::cout << "Last ret" << std::endl;
       return;
     }
   }
