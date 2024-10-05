@@ -2437,9 +2437,38 @@ static void optimizeSBF() {
     MPM.run(*mods[0], MAM);
 
     std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
+    std::vector<llvm::Function*> queue;
     for (auto &Func: mods[0]->functions()) {
         out << Func.getName().str() << "\n";
+        if (Func.getName() == "entrypoint") {
+            queue.push_back(&Func);
+        }
     }
+
+    out << "\nListing\n";
+    std::unordered_set<std::string> seen;
+    seen.insert("entrypoint");
+    while (!queue.empty()) {
+        Function *F = &*queue.back();
+        out << F->getName().str() << "\n";
+        queue.pop_back();
+        F->materialize();
+        for (auto &BB : *F) {
+            for (auto &I: BB) {
+                CallBase *CB = dyn_cast<CallBase>(&I);
+                if (!CB)
+                    continue;
+                Function *CF = CB->getCalledFunction();
+                if (!CF)
+                    continue;
+                if (CF->isDeclaration() || seen.find(CF->getName().str()) != seen.end())
+                    continue;
+                seen.insert(CF->getName().str());
+                queue.push_back(CF);
+            }
+        }
+    }
+
 
     out.close();
 
