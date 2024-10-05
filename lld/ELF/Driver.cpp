@@ -68,6 +68,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Transforms/IPO/ExtractGV.h"
 #include <cstdlib>
 #include <tuple>
 #include <utility>
@@ -2438,11 +2439,13 @@ static void optimizeSBF() {
 
     std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
     std::vector<llvm::Function*> queue;
+    std::unordered_map<std::string, llvm::Function*> mp;
     for (auto &Func: mods[0]->functions()) {
         out << Func.getName().str() << "\n";
         if (Func.getName() == "entrypoint") {
             queue.push_back(&Func);
         }
+        mp[Func.getName().str()] = &Func;
     }
 
     out << "\nListing\n";
@@ -2451,6 +2454,7 @@ static void optimizeSBF() {
     while (!queue.empty()) {
         Function *F = &*queue.back();
         out << F->getName().str() << "\n";
+        mp.erase(F->getName().str());
         queue.pop_back();
         F->materialize();
         for (auto &BB : *F) {
@@ -2469,7 +2473,40 @@ static void optimizeSBF() {
         }
     }
 
+    std::vector<GlobalValue*> to_remove;
+    to_remove.reserve(mp.size());
+    for (auto it = mp.begin(); it!= mp.end(); it++) {
+        to_remove.push_back(dyn_cast<GlobalValue>(it->second));
+    }
 
+    LoopAnalysisManager LAM2;
+    FunctionAnalysisManager FAM2;
+    CGSCCAnalysisManager CGAM2;
+    ModuleAnalysisManager MAM2;
+
+    // Create the new pass manager builder.
+    // Take a look at the PassBuilder constructor parameters for more
+    // customization, e.g. specifying a TargetMachine or various debugging
+    // options.
+    PassBuilder PB2;
+
+    // Register all the basic analyses with the managers.
+    PB.registerModuleAnalyses(MAM2);
+    PB.registerCGSCCAnalyses(CGAM2);
+    PB.registerFunctionAnalyses(FAM2);
+    PB.registerLoopAnalyses(LAM2);
+    PB.crossRegisterProxies(LAM2, FAM2, CGAM2, MAM2);
+
+    // Create the pass manager.
+    // This one corresponds to a typical -O2 optimization pipeline.
+    ModulePassManager MPM2;
+    MPM2.addPass(ExtractGVPass(to_remove, true));
+    MPM2.run(*mods[0], MAM2);
+
+    out << "After pass\n";
+    for (auto &Func: mods[0]->functions()) {
+        out << Func.getName().str() << "\n";
+    }
     out.close();
 
     SmallVector<char> buf;
