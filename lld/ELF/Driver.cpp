@@ -2384,13 +2384,20 @@ static void optimizeSBF() {
 
     bool hasEntrypoint = false;
     for (auto & Func: mods[0]->functions()) {
-//        std::cout << "Func names: " << Func.getName().str() << std::endl;
-//        if (Func.getName() != "entrypoint") {
-//            Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
-//            Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
-//        }
         if (Func.getName() == "entrypoint") {
             hasEntrypoint = true;
+        }
+    }
+
+    if (hasEntrypoint) {
+        for (auto &Func: mods[0]->functions()) {
+            //        std::cout << "Func names: " << Func.getName().str() << std::endl;
+            if (Func.getName() != "entrypoint") {
+                Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+                Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+            } else {
+                Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+            }
         }
     }
 
