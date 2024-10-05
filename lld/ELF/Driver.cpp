@@ -72,6 +72,7 @@
 #include <tuple>
 #include <utility>
 #include <iostream>
+#include <fstream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -2433,6 +2434,13 @@ static void optimizeSBF() {
     // This one corresponds to a typical -O2 optimization pipeline.
     ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
     MPM.run(*mods[0], MAM);
+
+    std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
+    for (auto &Func: mods[0]->functions()) {
+        out << Func.getName().str() << "\n";
+    }
+
+    out.close();
 
     SmallVector<char> buf;
     BitcodeWriter bw(buf);
