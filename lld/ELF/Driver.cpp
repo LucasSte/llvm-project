@@ -2379,6 +2379,7 @@ static void optimizeSBF() {
         Linker::linkModules(*mods[0], std::move(mods[i]), Linker::Flags::OverrideFromSrc);
     }
 
+    bool hasEntrypoint = false;
     for (auto & Func: mods[0]->functions()) {
 //        std::cout << "Func names: " << Func.getName().str() << std::endl;
 //        if (Func.getName() != "entrypoint") {
@@ -2386,9 +2387,20 @@ static void optimizeSBF() {
 //            Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
 //        }
         if (Func.getName() == "entrypoint") {
-            std::cout << "Found entrypoint" << std::endl;
+            hasEntrypoint = true;
         }
     }
+
+//    // TODO: I may need to parse the files!
+//    if (!hasEntrypoint) {
+//        for (BitcodeFile * file : ctx.bitcodeFiles) {
+//            file->parse();
+//        }
+//        for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
+//            file->parseLazy();
+//        }
+//        return;
+//    }
 
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
