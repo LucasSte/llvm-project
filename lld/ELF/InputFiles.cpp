@@ -296,7 +296,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   if (file->lazy) {
     if (auto *f = dyn_cast<BitcodeFile>(file)) {
       ctx.lazyBitcodeFiles.push_back(f);
-      f->parseLazy();
+      // f->parseLazy();
     } else {
       cast<ObjFile<ELFT>>(file)->parseLazy();
     }
@@ -313,7 +313,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
     f->parse<ELFT>();
   } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
     ctx.bitcodeFiles.push_back(f);
-    f->parse();
+    // f->parse();
   } else {
     ctx.binaryFiles.push_back(cast<BinaryFile>(file));
     cast<BinaryFile>(file)->parse();

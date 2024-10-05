@@ -2390,28 +2390,28 @@ static void optimizeSBF() {
         }
     }
 
-    LoopAnalysisManager LAM;
-    FunctionAnalysisManager FAM;
-    CGSCCAnalysisManager CGAM;
-    ModuleAnalysisManager MAM;
-
-    // Create the new pass manager builder.
-    // Take a look at the PassBuilder constructor parameters for more
-    // customization, e.g. specifying a TargetMachine or various debugging
-    // options.
-    PassBuilder PB;
-
-    // Register all the basic analyses with the managers.
-    PB.registerModuleAnalyses(MAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerLoopAnalyses(LAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-
-    // Create the pass manager.
-    // This one corresponds to a typical -O2 optimization pipeline.
-    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
-    MPM.run(*mods[0], MAM);
+//    LoopAnalysisManager LAM;
+//    FunctionAnalysisManager FAM;
+//    CGSCCAnalysisManager CGAM;
+//    ModuleAnalysisManager MAM;
+//
+//    // Create the new pass manager builder.
+//    // Take a look at the PassBuilder constructor parameters for more
+//    // customization, e.g. specifying a TargetMachine or various debugging
+//    // options.
+//    PassBuilder PB;
+//
+//    // Register all the basic analyses with the managers.
+//    PB.registerModuleAnalyses(MAM);
+//    PB.registerCGSCCAnalyses(CGAM);
+//    PB.registerFunctionAnalyses(FAM);
+//    PB.registerLoopAnalyses(LAM);
+//    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+//
+//    // Create the pass manager.
+//    // This one corresponds to a typical -O2 optimization pipeline.
+//    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
+//    MPM.run(*mods[0], MAM);
 
     SmallVector<char> buf;
     BitcodeWriter bw(buf);
