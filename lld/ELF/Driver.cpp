@@ -65,9 +65,13 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Linker/Linker.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include <cstdlib>
 #include <tuple>
 #include <utility>
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -2356,6 +2360,78 @@ static void markBuffersAsDontNeed(bool skipLinkedOutput) {
       mb.dontNeedIfMmap();
 }
 
+static void optimizeSBF() {
+    if (config->emachine != EM_BPF && config->emachine != EM_SBF)
+        return;
+    SMDiagnostic Err;
+    LLVMContext context;
+
+    std::vector<std::unique_ptr<Module>> mods;
+    for (BitcodeFile * file: ctx.bitcodeFiles) {
+        mods.push_back(llvm::parseIR(file->mb, Err, context));
+    }
+    for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
+        mods.push_back(llvm::parseIR(file->mb, Err, context));
+    }
+
+    std::cout << "Mods size: " << mods.size() << std::endl;
+    for (size_t i=1; i<mods.size(); i++) {
+        Linker::linkModules(*mods[0], std::move(mods[i]), Linker::Flags::OverrideFromSrc);
+    }
+
+//    for (auto & Func: mods[0]->functions()) {
+//        std::cout << "Func names: " << Func.getName().str() << std::endl;
+//        if (Func.getName() != "entrypoint") {
+//            Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+//            Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+//        }
+//    }
+
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+
+    // Create the new pass manager builder.
+    // Take a look at the PassBuilder constructor parameters for more
+    // customization, e.g. specifying a TargetMachine or various debugging
+    // options.
+    PassBuilder PB;
+
+    // Register all the basic analyses with the managers.
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    // Create the pass manager.
+    // This one corresponds to a typical -O2 optimization pipeline.
+    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
+    MPM.run(*mods[0], MAM);
+
+    SmallVector<char> buf;
+    BitcodeWriter bw(buf);
+    bw.writeModule(*mods[0]);
+    bw.writeSymtab();
+    bw.writeStrtab();
+    //  std::cout << "Buffer written: " << buf.size() << std::endl;
+    //
+    StringRef str_ref(reinterpret_cast<const char*>(buf.data()), buf.size());
+    BitcodeFile * in = ctx.bitcodeFiles[0];
+    //
+//    MemoryBufferRef buf_ref(str_ref, in->mb.getBufferIdentifier());
+//    //  std::cout << "Is eq: " << std::memcmp(buf_ref.getBuffer().data(), in->mb.getBuffer().data(), buf.size()) << std::endl;
+//    //  std::cout << "About to read" << std::endl;
+//    BitcodeFile * ptr = new BitcodeFile(buf_ref, in->archiveName, 0, false);
+//    std::cout << "About to parse" << std::endl;
+//    ptr->parse();
+//    // Ideally I'd call delete here
+//    ctx.bitcodeFiles.clear();
+//    ctx.lazyBitcodeFiles.clear();
+//    ctx.bitcodeFiles.push_back(ptr);
+}
+
 // This function is where all the optimizations of link-time
 // optimization takes place. When LTO is in use, some input files are
 // not in native object file format but in the LLVM bitcode format.
@@ -2710,6 +2786,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
     if (armCmseImpLib)
       parseArmCMSEImportLib(*armCmseImpLib);
   }
+
+  optimizeSBF();
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
