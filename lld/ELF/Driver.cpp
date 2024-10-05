@@ -2393,8 +2393,10 @@ static void optimizeSBF() {
         for (auto &Func: mods[0]->functions()) {
             //        std::cout << "Func names: " << Func.getName().str() << std::endl;
             if (Func.getName() != "entrypoint") {
-                Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
-                Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+                if (!Func.getName().starts_with("llvm.") && !Func.getName().starts_with("@llvm")) {
+                    Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+                    Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+                }
             } else {
                 Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
             }
