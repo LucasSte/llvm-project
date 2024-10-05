@@ -2433,6 +2433,7 @@ static void optimizeSBF() {
     // Create the pass manager.
     // This one corresponds to a typical -O2 optimization pipeline.
     ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
+    PB.parsePassPipeline(MPM, "globaldce");
     MPM.run(*mods[0], MAM);
 
     std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
