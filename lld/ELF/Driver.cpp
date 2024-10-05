@@ -2379,13 +2379,16 @@ static void optimizeSBF() {
         Linker::linkModules(*mods[0], std::move(mods[i]), Linker::Flags::OverrideFromSrc);
     }
 
-//    for (auto & Func: mods[0]->functions()) {
-//        std::cout << "Func names: " << Func.getName().str() << std::endl;
+    for (auto & Func: mods[0]->functions()) {
+        std::cout << "Func names: " << Func.getName().str() << std::endl;
 //        if (Func.getName() != "entrypoint") {
 //            Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
 //            Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
 //        }
-//    }
+        if (Func.getName() == "entrypoint") {
+            std::cout << "Found entrypoint" << std::endl;
+        }
+    }
 
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
@@ -2420,16 +2423,16 @@ static void optimizeSBF() {
     StringRef str_ref(reinterpret_cast<const char*>(buf.data()), buf.size());
     BitcodeFile * in = ctx.bitcodeFiles[0];
     //
-//    MemoryBufferRef buf_ref(str_ref, in->mb.getBufferIdentifier());
+    MemoryBufferRef buf_ref(str_ref, in->mb.getBufferIdentifier());
 //    //  std::cout << "Is eq: " << std::memcmp(buf_ref.getBuffer().data(), in->mb.getBuffer().data(), buf.size()) << std::endl;
 //    //  std::cout << "About to read" << std::endl;
-//    BitcodeFile * ptr = new BitcodeFile(buf_ref, in->archiveName, 0, false);
+    BitcodeFile * ptr = new BitcodeFile(buf_ref, in->archiveName, 0, false);
 //    std::cout << "About to parse" << std::endl;
-//    ptr->parse();
+    ptr->parse();
 //    // Ideally I'd call delete here
-//    ctx.bitcodeFiles.clear();
-//    ctx.lazyBitcodeFiles.clear();
-//    ctx.bitcodeFiles.push_back(ptr);
+    ctx.bitcodeFiles.clear();
+    ctx.lazyBitcodeFiles.clear();
+    ctx.bitcodeFiles.push_back(ptr);
 }
 
 // This function is where all the optimizations of link-time
