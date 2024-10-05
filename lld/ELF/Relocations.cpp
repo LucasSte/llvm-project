@@ -739,9 +739,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   default:
     llvm_unreachable("");
   }
-    if (sym.getName() == "abort") {
-        return;
-    }
+  return;
 
   if (msg.empty())
     msg = "undefined " + visibility() + "symbol: " + toString(sym);

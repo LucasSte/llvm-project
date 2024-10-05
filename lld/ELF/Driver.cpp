@@ -2439,22 +2439,24 @@ static void optimizeSBF() {
 
     std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
     std::vector<llvm::Function*> queue;
-    std::unordered_map<std::string, llvm::Function*> mp;
+    //std::unordered_map<std::string, llvm::Function*> mp;
     for (auto &Func: mods[0]->functions()) {
         out << Func.getName().str() << "\n";
         if (Func.getName() == "entrypoint") {
             queue.push_back(&Func);
         }
-        mp[Func.getName().str()] = &Func;
+        //mp[Func.getName().str()] = &Func;
     }
 
     out << "\nListing\n";
     std::unordered_set<std::string> seen;
+    std::vector<GlobalValue*> to_keep;
+
     seen.insert("entrypoint");
     while (!queue.empty()) {
         Function *F = &*queue.back();
         out << F->getName().str() << "\n";
-        mp.erase(F->getName().str());
+        to_keep.push_back(dyn_cast<GlobalValue>(F));
         queue.pop_back();
         F->materialize();
         for (auto &BB : *F) {
@@ -2473,11 +2475,10 @@ static void optimizeSBF() {
         }
     }
 
-    std::vector<GlobalValue*> to_remove;
-    to_remove.reserve(mp.size());
-    for (auto it = mp.begin(); it!= mp.end(); it++) {
-        to_remove.push_back(dyn_cast<GlobalValue>(it->second));
-    }
+    //to_remove.reserve(mp.size());
+//    for (auto it = mp.begin(); it!= mp.end(); it++) {
+//        to_remove.push_back(dyn_cast<GlobalValue>(it->second));
+//    }
 
     LoopAnalysisManager LAM2;
     FunctionAnalysisManager FAM2;
@@ -2500,7 +2501,7 @@ static void optimizeSBF() {
     // Create the pass manager.
     // This one corresponds to a typical -O2 optimization pipeline.
     ModulePassManager MPM2;
-    MPM2.addPass(ExtractGVPass(to_remove, true));
+    MPM2.addPass(ExtractGVPass(to_keep, false));
     MPM2.run(*mods[0], MAM2);
 
     out << "After pass\n";
