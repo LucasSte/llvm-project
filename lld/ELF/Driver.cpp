@@ -2363,15 +2363,18 @@ static void markBuffersAsDontNeed(bool skipLinkedOutput) {
 static void optimizeSBF() {
     if (config->emachine != EM_BPF && config->emachine != EM_SBF)
         return;
+
     SMDiagnostic Err;
     LLVMContext context;
 
     std::vector<std::unique_ptr<Module>> mods;
     for (BitcodeFile * file: ctx.bitcodeFiles) {
-        mods.push_back(llvm::parseIR(file->mb, Err, context));
+        auto mod = llvm::parseIR(file->mb, Err, context);
+        mods.push_back(std::move(mod));
     }
     for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
-        mods.push_back(llvm::parseIR(file->mb, Err, context));
+        auto mod = llvm::parseIR(file->mb, Err, context);
+        mods.push_back(std::move(mod));
     }
 
     std::cout << "Mods size: " << mods.size() << std::endl;
@@ -2390,17 +2393,6 @@ static void optimizeSBF() {
             hasEntrypoint = true;
         }
     }
-
-//    // TODO: I may need to parse the files!
-//    if (!hasEntrypoint) {
-//        for (BitcodeFile * file : ctx.bitcodeFiles) {
-//            file->parse();
-//        }
-//        for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
-//            file->parseLazy();
-//        }
-//        return;
-//    }
 
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
