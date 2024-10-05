@@ -2401,6 +2401,14 @@ static void optimizeSBF() {
                 Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
             }
         }
+        for (auto &GV : mods[0]->globals()) {
+            GV.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+            GV.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+        }
+        for (auto &GVA : mods[0]->aliases()) {
+            GVA.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+            GVA.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+        }
     }
 
     LoopAnalysisManager LAM;
