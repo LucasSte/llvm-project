@@ -2501,6 +2501,7 @@ static void optimizeSBF() {
     // Create the pass manager.
     // This one corresponds to a typical -O2 optimization pipeline.
     ModulePassManager MPM2;
+    // TODO: Use true here (to_remove items) and collect aliases too!
     MPM2.addPass(ExtractGVPass(to_keep, false));
     MPM2.run(*mods[0], MAM2);
 
