@@ -57,6 +57,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -198,6 +199,7 @@ static bool isAbsolute(const Symbol &sym) {
 }
 
 static bool isAbsoluteValue(const Symbol &sym) {
+    std::cout << "a: " << isAbsolute(sym) << " b: " << sym.isTls() << std::endl;
   return isAbsolute(sym) || sym.isTls();
 }
 
