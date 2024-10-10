@@ -314,7 +314,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
   if (file->kind() == InputFile::ObjKind) {
     ctx.objectFiles.push_back(cast<ELFFileBase>(file));
-    cast<ObjFile<ELFT>>(file)->parse();
+    cast<ObjFile<ELFT>>(file)->initialParse();
   } else if (auto *f = dyn_cast<SharedFile>(file)) {
     f->parse<ELFT>();
   } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
@@ -566,6 +566,20 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
   return CHECK(
       this->getObj().getSectionIndex(sym, getELFSyms<ELFT>(), shndxTable),
       this);
+}
+
+template <class ELFT> void ObjFile<ELFT>::initialParse() {
+    object::ELFFile<ELFT> obj = this->getObj();
+    ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
+    StringRef shstrtab = CHECK(obj.getSectionStringTable(objSections), this);
+    for (size_t i=0; i < objSections.size(); i++) {
+        const Elf_Shdr &sec = objSections[i];
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        if (name == ".llvmbc") {
+            this->sections[i] = createInputSection(
+                    i, sec, check(obj.getSectionName(sec, shstrtab)));
+        }
+    }
 }
 
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {

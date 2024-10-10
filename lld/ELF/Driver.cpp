@@ -2368,6 +2368,24 @@ static void optimizeSBF() {
     if (config->emachine != EM_BPF && config->emachine != EM_SBF)
         return;
 
+    std::vector<ELFFileBase*> builtin_files;
+    std::vector<BitcodeFile*> bitcodes;
+    for (ELFFileBase * file : ctx.objectFiles) {
+        if (file->getName().contains("compiler_builtins")) {
+            builtin_files.push_back(file);
+        }
+        for (InputSectionBase* sec: file->getSections()) {
+            if (sec && sec->name == ".llvmbc") {
+                ArrayRef<uint8_t> contents = sec->content();
+                StringRef str_ref(contents.data(), contents.size());
+                MemoryBufferRef mem_ref(str_ref, file->getName() + "mem");
+                BitcodeFile * file = new BitcodeFile(mem_ref, file->getName(), 0, false);
+                bitcodes.push_back(file);
+            }
+        }
+    }
+
+
     SMDiagnostic Err;
     LLVMContext context;
 
@@ -2377,6 +2395,10 @@ static void optimizeSBF() {
         mods.push_back(std::move(mod));
     }
     for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
+        auto mod = llvm::parseIR(file->mb, Err, context);
+        mods.push_back(std::move(mod));
+    }
+    for (BitcodeFile * file: bitcodes) {
         auto mod = llvm::parseIR(file->mb, Err, context);
         mods.push_back(std::move(mod));
     }
@@ -2526,48 +2548,51 @@ static void optimizeSBF() {
     pass.run(*mods[0]);
     dest.flush();
 
-    SmallVector<char> buf;
-    BitcodeWriter bw(buf);
-    bw.writeModule(*mods[0]);
-    bw.writeSymtab();
-    bw.writeStrtab();
-    //  std::cout << "Buffer written: " << buf.size() << std::endl;
-    //
-    StringRef str_ref(reinterpret_cast<const char*>(buf.data()), buf.size());
-    BitcodeFile * in = ctx.bitcodeFiles[0];
-    //
-    MemoryBufferRef buf_ref(str_ref, in->mb.getBufferIdentifier());
+    raw_fd_ostream
+
+
+//    SmallVector<char> buf;
+//    BitcodeWriter bw(buf);
+//    bw.writeModule(*mods[0]);
+//    bw.writeSymtab();
+//    bw.writeStrtab();
+//    //  std::cout << "Buffer written: " << buf.size() << std::endl;
+//    //
+//    StringRef str_ref(reinterpret_cast<const char*>(buf.data()), buf.size());
+//    BitcodeFile * in = ctx.bitcodeFiles[0];
+//    //
+//    MemoryBufferRef buf_ref(str_ref, in->mb.getBufferIdentifier());
 //    //  std::cout << "Is eq: " << std::memcmp(buf_ref.getBuffer().data(), in->mb.getBuffer().data(), buf.size()) << std::endl;
 //    //  std::cout << "About to read" << std::endl;
-    BitcodeFile * ptr = new BitcodeFile(buf_ref, in->archiveName, 0, false);
+//    BitcodeFile * ptr = new BitcodeFile(buf_ref, in->archiveName, 0, false);
 //    std::cout << "About to parse" << std::endl;
-    ptr->parse();
+    //ptr->parse();
 //    // Ideally I'd call delete here
-    std::vector<BitcodeFile*> file_keep;
-    for (BitcodeFile * file: ctx.bitcodeFiles) {
-        if (file->getName().contains("compiler_builtins")) {
-            file_keep.push_back(file);
-        }
-    }
+//    std::vector<BitcodeFile*> file_keep;
+//    for (BitcodeFile * file: ctx.bitcodeFiles) {
+//        if (file->getName().contains("compiler_builtins")) {
+//            file_keep.push_back(file);
+//        }
+//    }
     ctx.bitcodeFiles.clear();
 
     std::vector<BitcodeFile*> lazy_keep;
-    for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
-        if (file->getName().contains("compiler_builtins")) {
-            lazy_keep.push_back(file);
-        }
-    }
+//    for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
+//        if (file->getName().contains("compiler_builtins")) {
+//            lazy_keep.push_back(file);
+//        }
+//    }
     ctx.lazyBitcodeFiles.clear();
-    for (BitcodeFile * file: lazy_keep) {
-        file->parseLazy();
-        ctx.lazyBitcodeFiles.push_back(file);
-    }
+//    for (BitcodeFile * file: lazy_keep) {
+//        file->parseLazy();
+//        ctx.lazyBitcodeFiles.push_back(file);
+//    }
 
     ctx.bitcodeFiles.push_back(ptr);
-    for (BitcodeFile * file: file_keep) {
-        file->parse();
-        ctx.bitcodeFiles.push_back(file);
-    }
+//    for (BitcodeFile * file: file_keep) {
+//        file->parse();
+//        ctx.bitcodeFiles.push_back(file);
+//    }
 }
 
 // This function is where all the optimizations of link-time

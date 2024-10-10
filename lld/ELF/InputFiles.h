@@ -287,6 +287,8 @@ public:
   // Get cached DWARF information.
   DWARFCache *getDwarf();
 
+  void initialParse();
+
   void initSectionsAndLocalSyms(bool ignoreComdats);
   void postParse();
   void importCmseSymbols();
