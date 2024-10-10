@@ -2522,8 +2522,9 @@ static void optimizeSBF() {
     std::string error;
     auto Target = TargetRegistry::lookupTarget(targetTriple, error);
     TargetOptions op;
+    op.FunctionSections = true;
     auto TheTargetMachine = Target->createTargetMachine(
-            targetTriple, "v1", "", op, std::nullopt);
+            targetTriple, "v1", "", op, Reloc::Model::PIC_);
     auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
     std::error_code EC;
     raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
