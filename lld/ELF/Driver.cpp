@@ -69,6 +69,8 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Transforms/IPO/ExtractGV.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cstdlib>
 #include <tuple>
 #include <utility>
@@ -2501,7 +2503,6 @@ static void optimizeSBF() {
     // Create the pass manager.
     // This one corresponds to a typical -O2 optimization pipeline.
     ModulePassManager MPM2;
-    // TODO: Use true here (to_remove items) and collect aliases too!
     MPM2.addPass(ExtractGVPass(to_keep, false));
     MPM2.run(*mods[0], MAM2);
 
@@ -2510,6 +2511,20 @@ static void optimizeSBF() {
         out << Func.getName().str() << "\n";
     }
     out.close();
+
+    std::string targetTriple = mods[0]->getTargetTriple();
+    std::string error;
+    auto Target = TargetRegistry::lookupTarget(targetTriple, error);
+    TargetOptions op;
+    auto TheTargetMachine = Target->createTargetMachine(
+            targetTriple, "v1", "", op, std::nullopt);
+    auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
+    std::error_code EC;
+    raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
+    legacy::PassManager pass;
+    TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, CodeGenFileType::AssemblyFile);
+    pass.run(*mods[0]);
+    dest.flush();
 
     SmallVector<char> buf;
     BitcodeWriter bw(buf);
