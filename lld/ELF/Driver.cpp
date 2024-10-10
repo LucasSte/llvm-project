@@ -2543,9 +2543,19 @@ static void optimizeSBF() {
 //    std::cout << "About to parse" << std::endl;
     ptr->parse();
 //    // Ideally I'd call delete here
+    std::vector<BitcodeFile*> file_keep;
+    for (BitcodeFile * file: ctx.bitcodeFiles) {
+        if (file->getName().contains("compiler_builtins")) {
+            file_keep.push_back(file);
+        }
+    }
     ctx.bitcodeFiles.clear();
     ctx.lazyBitcodeFiles.clear();
     ctx.bitcodeFiles.push_back(ptr);
+    for (BitcodeFile * file: file_keep) {
+        file->parse();
+        ctx.bitcodeFiles.push_back(file);
+    }
 }
 
 // This function is where all the optimizations of link-time
