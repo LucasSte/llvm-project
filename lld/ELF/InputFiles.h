@@ -48,6 +48,8 @@ std::optional<MemoryBufferRef> readFile(StringRef path);
 // Add symbols in File to the symbol table.
 void parseFile(InputFile *file);
 
+void parseAgain(InputFile *file);
+
 void parseArmCMSEImportLib(InputFile *file);
 
 // The root class of input files.

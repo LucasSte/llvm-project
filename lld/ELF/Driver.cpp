@@ -2377,8 +2377,8 @@ static void optimizeSBF() {
         for (InputSectionBase* sec: file->getSections()) {
             if (sec && sec->name == ".llvmbc") {
                 ArrayRef<uint8_t> contents = sec->content();
-                StringRef str_ref(contents.data(), contents.size());
-                MemoryBufferRef mem_ref(str_ref, file->getName() + "mem");
+                StringRef str_ref(reinterpret_cast<const char*>(contents.data()), contents.size());
+                MemoryBufferRef mem_ref(str_ref, file->getName().str() + "mem");
                 BitcodeFile * file = new BitcodeFile(mem_ref, file->getName(), 0, false);
                 bitcodes.push_back(file);
             }
@@ -2548,7 +2548,20 @@ static void optimizeSBF() {
     pass.run(*mods[0]);
     dest.flush();
 
-    raw_fd_ostream
+    auto OptFile = "/Users/lucasste/Documents/sol-example/comp.o";
+    raw_fd_ostream dest2(OptFile, EC, sys::fs::OF_None);
+    legacy::PassManager pass2;
+    TheTargetMachine->addPassesToEmitFile(pass2, dest2, nullptr, CodeGenFileType::ObjectFile);
+    pass.run(*mods[0]);
+    dest.flush();
+
+    std::optional<MemoryBufferRef> mb = readFile(OptFile);
+    ELFFileBase * opt_file = createObjFile(*mb, OptFile, false);
+    ctx.objectFiles.clear();
+    parseAgain(opt_file);
+    for (InputFile * file: builtin_files) {
+        parseAgain(file);
+    }
 
 
 //    SmallVector<char> buf;
@@ -2576,7 +2589,7 @@ static void optimizeSBF() {
 //    }
     ctx.bitcodeFiles.clear();
 
-    std::vector<BitcodeFile*> lazy_keep;
+//    std::vector<BitcodeFile*> lazy_keep;
 //    for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
 //        if (file->getName().contains("compiler_builtins")) {
 //            lazy_keep.push_back(file);
@@ -2588,7 +2601,7 @@ static void optimizeSBF() {
 //        ctx.lazyBitcodeFiles.push_back(file);
 //    }
 
-    ctx.bitcodeFiles.push_back(ptr);
+//    ctx.bitcodeFiles.push_back(ptr);
 //    for (BitcodeFile * file: file_keep) {
 //        file->parse();
 //        ctx.bitcodeFiles.push_back(file);

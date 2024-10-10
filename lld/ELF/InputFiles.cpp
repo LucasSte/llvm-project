@@ -290,7 +290,7 @@ static bool isCompatible(InputFile *file) {
   return false;
 }
 
-template <class ELFT> static void doParseFile(InputFile *file) {
+template <class ELFT> static void doParseFile(InputFile *file, bool initial) {
   if (!isCompatible(file))
     return;
   std::ofstream out("/Users/lucasste/Documents/sol-example/input_files.txt", std::ios_base::app);
@@ -314,7 +314,11 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
   if (file->kind() == InputFile::ObjKind) {
     ctx.objectFiles.push_back(cast<ELFFileBase>(file));
-    cast<ObjFile<ELFT>>(file)->initialParse();
+    if (initial) {
+        cast<ObjFile<ELFT>>(file)->initialParse();
+    } else {
+        cast<ObjFile<ELFT>>(file)->parse();
+    }
   } else if (auto *f = dyn_cast<SharedFile>(file)) {
     f->parse<ELFT>();
   } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
@@ -327,7 +331,9 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 }
 
 // Add symbols in File to the symbol table.
-void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
+void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file, true); }
+
+void elf::parseAgain(InputFile *file) { invokeELFT(doParseFile, file, false); }
 
 // This function is explicity instantiated in ARM.cpp. Mark it extern here,
 // to avoid warnings when building with MSVC.
@@ -575,6 +581,7 @@ template <class ELFT> void ObjFile<ELFT>::initialParse() {
     for (size_t i=0; i < objSections.size(); i++) {
         const Elf_Shdr &sec = objSections[i];
         StringRef name = check(obj.getSectionName(sec, shstrtab));
+        std::cout << "sec: " << name.str() << std::endl;
         if (name == ".llvmbc") {
             this->sections[i] = createInputSection(
                     i, sec, check(obj.getSectionName(sec, shstrtab)));
