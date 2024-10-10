@@ -2373,10 +2373,16 @@ static void optimizeSBF() {
 
     std::vector<std::unique_ptr<Module>> mods;
     for (BitcodeFile * file: ctx.bitcodeFiles) {
+        if (file->getName().contains("compiler_builtins")) {
+            continue;
+        }
         auto mod = llvm::parseIR(file->mb, Err, context);
         mods.push_back(std::move(mod));
     }
     for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
+        if (file->getName().contains("compiler_builtins")) {
+            continue;
+        }
         auto mod = llvm::parseIR(file->mb, Err, context);
         mods.push_back(std::move(mod));
     }
