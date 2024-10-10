@@ -194,12 +194,11 @@ static bool isAbsolute(const Symbol &sym) {
   if (sym.isUndefWeak())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
-    return dr->section == nullptr; // Absolute symbol.
+      return dr->section == nullptr; // Absolute symbol.
   return false;
 }
 
 static bool isAbsoluteValue(const Symbol &sym) {
-    std::cout << "a: " << isAbsolute(sym) << " b: " << sym.isTls() << std::endl;
   return isAbsolute(sym) || sym.isTls();
 }
 
