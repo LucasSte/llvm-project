@@ -2550,7 +2550,19 @@ static void optimizeSBF() {
         }
     }
     ctx.bitcodeFiles.clear();
+
+    std::vector<BitcodeFile*> lazy_keep;
+    for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
+        if (file->getName().contains("compiler_builtins")) {
+            lazy_keep.push_back(file);
+        }
+    }
     ctx.lazyBitcodeFiles.clear();
+    for (BitcodeFile * file: lazy_keep) {
+        file->parseLazy();
+        ctx.lazyBitcodeFiles.push_back(file);
+    }
+
     ctx.bitcodeFiles.push_back(ptr);
     for (BitcodeFile * file: file_keep) {
         file->parse();
