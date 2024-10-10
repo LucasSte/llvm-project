@@ -31,6 +31,8 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <iostream>
+#include <fstream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -291,7 +293,10 @@ static bool isCompatible(InputFile *file) {
 template <class ELFT> static void doParseFile(InputFile *file) {
   if (!isCompatible(file))
     return;
-
+  std::ofstream out("/Users/lucasste/Documents/sol-example/input_files.txt", std::ios_base::app);
+  out << "start\n";
+  out << file->getName().str() << "\n";
+  out.close();
   // Lazy object file
   if (file->lazy) {
     if (auto *f = dyn_cast<BitcodeFile>(file)) {
