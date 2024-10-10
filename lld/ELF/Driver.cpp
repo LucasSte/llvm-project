@@ -2375,7 +2375,9 @@ static void optimizeSBF() {
             builtin_files.push_back(file);
         }
         for (InputSectionBase* sec: file->getSections()) {
+            std::cout << "sec: " << sec << std::endl;
             if (sec && sec->name == ".llvmbc") {
+                std::cout << "At a bc section" << std::endl;
                 ArrayRef<uint8_t> contents = sec->content();
                 StringRef str_ref(reinterpret_cast<const char*>(contents.data()), contents.size());
                 MemoryBufferRef mem_ref(str_ref, file->getName().str() + "mem");

@@ -581,8 +581,8 @@ template <class ELFT> void ObjFile<ELFT>::initialParse() {
     for (size_t i=0; i < objSections.size(); i++) {
         const Elf_Shdr &sec = objSections[i];
         StringRef name = check(obj.getSectionName(sec, shstrtab));
-        std::cout << "sec: " << name.str() << std::endl;
         if (name == ".llvmbc") {
+            std::cout << "Found bc section! " << std::endl;
             this->sections[i] = createInputSection(
                     i, sec, check(obj.getSectionName(sec, shstrtab)));
         }
