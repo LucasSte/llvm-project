@@ -2442,96 +2442,98 @@ static void optimizeSBF() {
     // Create the pass manager.
     // This one corresponds to a typical -O2 optimization pipeline.
     ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
-    PB.parsePassPipeline(MPM, "globaldce");
+    PB.parsePassPipeline(MPM, "globaldce,dce");
     MPM.run(*mods[0], MAM);
 
-    std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
-    std::vector<llvm::Function*> queue;
-    //std::unordered_map<std::string, llvm::Function*> mp;
-    for (auto &Func: mods[0]->functions()) {
-        out << Func.getName().str() << "\n";
-        if (Func.getName() == "entrypoint") {
-            queue.push_back(&Func);
+    if (hasEntrypoint) {
+        std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
+        std::vector<llvm::Function*> queue;
+        //std::unordered_map<std::string, llvm::Function*> mp;
+        for (auto &Func: mods[0]->functions()) {
+            out << Func.getName().str() << "\n";
+            if (Func.getName() == "entrypoint") {
+                queue.push_back(&Func);
+            }
+            //mp[Func.getName().str()] = &Func;
         }
-        //mp[Func.getName().str()] = &Func;
-    }
 
-    out << "\nListing\n";
-    std::unordered_set<std::string> seen;
-    std::vector<GlobalValue*> to_keep;
+        out << "\nListing\n";
+        std::unordered_set<std::string> seen;
+        std::vector<GlobalValue*> to_keep;
 
-    seen.insert("entrypoint");
-    while (!queue.empty()) {
-        Function *F = &*queue.back();
-        out << F->getName().str() << "\n";
-        to_keep.push_back(dyn_cast<GlobalValue>(F));
-        queue.pop_back();
-        F->materialize();
-        for (auto &BB : *F) {
-            for (auto &I: BB) {
-                CallBase *CB = dyn_cast<CallBase>(&I);
-                if (!CB)
-                    continue;
-                Function *CF = CB->getCalledFunction();
-                if (!CF)
-                    continue;
-                if (CF->isDeclaration() || seen.find(CF->getName().str()) != seen.end())
-                    continue;
-                seen.insert(CF->getName().str());
-                queue.push_back(CF);
+        seen.insert("entrypoint");
+        while (!queue.empty()) {
+            Function *F = &*queue.back();
+            out << F->getName().str() << "\n";
+            to_keep.push_back(dyn_cast<GlobalValue>(F));
+            queue.pop_back();
+            F->materialize();
+            for (auto &BB : *F) {
+                for (auto &I: BB) {
+                    CallBase *CB = dyn_cast<CallBase>(&I);
+                    if (!CB)
+                        continue;
+                    Function *CF = CB->getCalledFunction();
+                    if (!CF)
+                        continue;
+                    if (CF->isDeclaration() || seen.find(CF->getName().str()) != seen.end())
+                        continue;
+                    seen.insert(CF->getName().str());
+                    queue.push_back(CF);
+                }
             }
         }
-    }
 
-    //to_remove.reserve(mp.size());
+        //to_remove.reserve(mp.size());
 //    for (auto it = mp.begin(); it!= mp.end(); it++) {
 //        to_remove.push_back(dyn_cast<GlobalValue>(it->second));
 //    }
 
-    LoopAnalysisManager LAM2;
-    FunctionAnalysisManager FAM2;
-    CGSCCAnalysisManager CGAM2;
-    ModuleAnalysisManager MAM2;
+        LoopAnalysisManager LAM2;
+        FunctionAnalysisManager FAM2;
+        CGSCCAnalysisManager CGAM2;
+        ModuleAnalysisManager MAM2;
 
-    // Create the new pass manager builder.
-    // Take a look at the PassBuilder constructor parameters for more
-    // customization, e.g. specifying a TargetMachine or various debugging
-    // options.
-    PassBuilder PB2;
+        // Create the new pass manager builder.
+        // Take a look at the PassBuilder constructor parameters for more
+        // customization, e.g. specifying a TargetMachine or various debugging
+        // options.
+        PassBuilder PB2;
 
-    // Register all the basic analyses with the managers.
-    PB.registerModuleAnalyses(MAM2);
-    PB.registerCGSCCAnalyses(CGAM2);
-    PB.registerFunctionAnalyses(FAM2);
-    PB.registerLoopAnalyses(LAM2);
-    PB.crossRegisterProxies(LAM2, FAM2, CGAM2, MAM2);
+        // Register all the basic analyses with the managers.
+        PB.registerModuleAnalyses(MAM2);
+        PB.registerCGSCCAnalyses(CGAM2);
+        PB.registerFunctionAnalyses(FAM2);
+        PB.registerLoopAnalyses(LAM2);
+        PB.crossRegisterProxies(LAM2, FAM2, CGAM2, MAM2);
 
-    // Create the pass manager.
-    // This one corresponds to a typical -O2 optimization pipeline.
-    ModulePassManager MPM2;
-    MPM2.addPass(ExtractGVPass(to_keep, false));
-    MPM2.run(*mods[0], MAM2);
+        // Create the pass manager.
+        // This one corresponds to a typical -O2 optimization pipeline.
+        ModulePassManager MPM2;
+        MPM2.addPass(ExtractGVPass(to_keep, false));
+        MPM2.run(*mods[0], MAM2);
 
-    out << "After pass\n";
-    for (auto &Func: mods[0]->functions()) {
-        out << Func.getName().str() << "\n";
+        out << "After pass\n";
+        for (auto &Func: mods[0]->functions()) {
+            out << Func.getName().str() << "\n";
+        }
+        out.close();
+
+        std::string targetTriple = mods[0]->getTargetTriple();
+        std::string error;
+        auto Target = TargetRegistry::lookupTarget(targetTriple, error);
+        TargetOptions op;
+        op.FunctionSections = true;
+        auto TheTargetMachine = Target->createTargetMachine(
+                targetTriple, "v1", "", op, Reloc::Model::PIC_);
+        auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
+        std::error_code EC;
+        raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
+        legacy::PassManager pass;
+        TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, CodeGenFileType::AssemblyFile);
+        pass.run(*mods[0]);
+        dest.flush();
     }
-    out.close();
-
-    std::string targetTriple = mods[0]->getTargetTriple();
-    std::string error;
-    auto Target = TargetRegistry::lookupTarget(targetTriple, error);
-    TargetOptions op;
-    op.FunctionSections = true;
-    auto TheTargetMachine = Target->createTargetMachine(
-            targetTriple, "v1", "", op, Reloc::Model::PIC_);
-    auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
-    std::error_code EC;
-    raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
-    legacy::PassManager pass;
-    TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, CodeGenFileType::AssemblyFile);
-    pass.run(*mods[0]);
-    dest.flush();
 
     SmallVector<char> buf;
     BitcodeWriter bw(buf);
