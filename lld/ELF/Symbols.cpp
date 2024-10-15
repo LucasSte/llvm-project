@@ -268,9 +268,10 @@ void Symbol::extract() const {
     if (isa<BitcodeFile>(file)) {
         BitcodeFile * ff = dyn_cast<BitcodeFile>(file);
         ff->parse();
-    } else {
-        parseFile(file);
     }
+    //else {
+        parseFile(file);
+    //}
   }
 }
 
