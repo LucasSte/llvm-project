@@ -2055,7 +2055,8 @@ static void handleUndefinedGlob(StringRef arg) {
     handleUndefined(sym, "--undefined-glob");
 }
 
-static void handleLibcall(StringRef name) {
+static void handleLibcall(StringRef name, std::ofstream &out) {
+  out << name.str() << "\n";
   Symbol *sym = symtab.find(name);
   if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
     sym->extract();
@@ -2522,7 +2523,6 @@ static void optimizeSBF() {
         for (auto &Func: mods[0]->functions()) {
             out << Func.getName().str() << "\n";
         }
-        out.close();
 
         std::string targetTriple = mods[0]->getTargetTriple();
         std::string error;
@@ -2539,6 +2539,16 @@ static void optimizeSBF() {
         TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, CodeGenFileType::AssemblyFile);
         std::cout << "Regenerating code!" << std::endl;
         pass.run(*mods[0]);
+
+        out << "\n\nAfter codegen\n";
+        for (auto &Func: mods[0]->functions()) {
+            out << Func.getName().str() << "\n";
+        }
+
+        out << "\n\nSymbolTable\n";
+
+
+        out.close();
         dest.flush();
     }
 
@@ -2996,9 +3006,13 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
-      handleLibcall(s);
+  if (!ctx.bitcodeFiles.empty()) {
+      std::ofstream out("/Users/lucasste/Documents/sol-example/libcallsym.txt");
+      for (auto *s : lto::LTO::getRuntimeLibcallSymbols()) {
+          handleLibcall(s, out);
+      }
+      out.close();
+  }
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
