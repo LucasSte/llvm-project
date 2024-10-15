@@ -2399,6 +2399,7 @@ static void optimizeSBF() {
         }
     }
 
+    //TODO: Once this is working, try with dynamic dispatch and function pointers.
     if (hasEntrypoint) {
         for (auto &Func: mods[0]->functions()) {
             //        std::cout << "Func names: " << Func.getName().str() << std::endl;
@@ -2412,12 +2413,16 @@ static void optimizeSBF() {
             }
         }
         for (auto &GV : mods[0]->globals()) {
-            GV.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
-            GV.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+            if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
+                GV.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+                GV.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+            }
         }
         for (auto &GVA : mods[0]->aliases()) {
-            GVA.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
-            GVA.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+            if (!GVA.getName().starts_with("llvm.") && !GVA.getName().starts_with("@llvm")) {
+                GVA.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+                GVA.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+            }
         }
     }
 
@@ -2552,7 +2557,6 @@ static void optimizeSBF() {
 //    //  std::cout << "About to read" << std::endl;
     BitcodeFile * ptr = new BitcodeFile(buf_ref, in->archiveName, 0, false);
 //    std::cout << "About to parse" << std::endl;
-    ptr->parse();
 //    // Ideally I'd call delete here
     std::vector<BitcodeFile*> file_keep;
     for (BitcodeFile * file: ctx.bitcodeFiles) {
@@ -2574,6 +2578,7 @@ static void optimizeSBF() {
         ctx.lazyBitcodeFiles.push_back(file);
     }
 
+    ptr->parse();
     ctx.bitcodeFiles.push_back(ptr);
     for (BitcodeFile * file: file_keep) {
         file->parse();
