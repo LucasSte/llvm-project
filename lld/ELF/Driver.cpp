@@ -2365,6 +2365,12 @@ static void markBuffersAsDontNeed(bool skipLinkedOutput) {
       mb.dontNeedIfMmap();
 }
 
+/* TODO List:
+ * 1. Make sure I emit the entrypoint first
+ * 2. Test with the escrow contract
+ * 3. Test with Rust function pointers
+ * 4. Test with Rust dynamic dispatch tables (dyn)
+ */
 static void optimizeSBF() {
     if (config->emachine != EM_BPF && config->emachine != EM_SBF)
         return;
