@@ -2513,7 +2513,7 @@ static void optimizeSBF() {
         MPM2.addPass(ExtractGVPass(to_keep, false));
         MPM2.run(*mods[0], MAM2);
 
-        out << "After pass\n";
+        out << "\n\nAfter pass\n";
         for (auto &Func: mods[0]->functions()) {
             out << Func.getName().str() << "\n";
         }
@@ -2524,6 +2524,7 @@ static void optimizeSBF() {
         auto Target = TargetRegistry::lookupTarget(targetTriple, error);
         TargetOptions op;
         op.FunctionSections = true;
+        op.DataSections = true;
         auto TheTargetMachine = Target->createTargetMachine(
                 targetTriple, "v1", "", op, Reloc::Model::PIC_);
         auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
@@ -2531,6 +2532,7 @@ static void optimizeSBF() {
         raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
         legacy::PassManager pass;
         TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, CodeGenFileType::AssemblyFile);
+        std::cout << "Regenerating code!" << std::endl;
         pass.run(*mods[0]);
         dest.flush();
     }
