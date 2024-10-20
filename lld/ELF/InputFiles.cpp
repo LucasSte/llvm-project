@@ -293,7 +293,7 @@ static bool isCompatible(InputFile *file) {
 template <class ELFT> static void doParseFile(InputFile *file) {
   if (!isCompatible(file))
     return;
-  std::ofstream out("/Users/lucasste/Documents/sol-example/input_files.txt", std::ios_base::app);
+  std::ofstream out("/Users/lucasste/Documents/solana-test/input_files.txt", std::ios_base::app);
   out << "start\n";
   out << file->getName().str() << "\n";
   out.close();

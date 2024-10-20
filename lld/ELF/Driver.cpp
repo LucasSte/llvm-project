@@ -2458,7 +2458,7 @@ static void optimizeSBF() {
     MPM.run(*mods[0], MAM);
 
     if (hasEntrypoint) {
-        std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
+        std::ofstream out("/Users/lucasste/Documents/solana-test/lld.txt");
         std::vector<llvm::Function*> queue;
         //std::unordered_map<std::string, llvm::Function*> mp;
         for (auto &Func: mods[0]->functions()) {
@@ -2538,7 +2538,7 @@ static void optimizeSBF() {
         op.DataSections = true;
         auto TheTargetMachine = Target->createTargetMachine(
                 targetTriple, "v1", "", op, Reloc::Model::PIC_);
-        auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
+        auto Filename = "/Users/lucasste/Documents/solana-test/comp.s";
         std::error_code EC;
         raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
         legacy::PassManager pass;
@@ -3013,7 +3013,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
   if (!ctx.bitcodeFiles.empty()) {
-      std::ofstream out("/Users/lucasste/Documents/sol-example/libcallsym.txt");
+      std::ofstream out("/Users/lucasste/Documents/solana-test/libcallsym.txt");
       for (auto *s : lto::LTO::getRuntimeLibcallSymbols()) {
           handleLibcall(s, out);
       }
