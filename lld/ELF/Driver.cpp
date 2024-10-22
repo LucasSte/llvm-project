@@ -2474,6 +2474,12 @@ static void optimizeSBF() {
             //mp[Func.getName().str()] = &Func;
         }
 
+        for (auto &GV : mods[0]->globals()) {
+            if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
+                to_keep.push_back(&GV);
+            }
+        }
+
         out << "\nListing\n";
         std::unordered_set<std::string> seen;
 
