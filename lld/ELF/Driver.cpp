@@ -2406,11 +2406,13 @@ static void optimizeSBF() {
         }
     }
 
+    std::unordered_set<std::string> external_funcs = {"entrypoint", "abort", "sol_log_"};
+
     //TODO: Once this is working, try with dynamic dispatch and function pointers.
     if (hasEntrypoint) {
         for (auto &Func: mods[0]->functions()) {
             //        std::cout << "Func names: " << Func.getName().str() << std::endl;
-            if (Func.getName() != "entrypoint") {
+            if (external_funcs.find(Func.getName().str()) == external_funcs.end()) {
                 if (!Func.getName().starts_with("llvm.") && !Func.getName().starts_with("@llvm")) {
                     Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
                     Func.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
@@ -2460,18 +2462,20 @@ static void optimizeSBF() {
     if (hasEntrypoint) {
         std::ofstream out("/Users/lucasste/Documents/solana-test/lld.txt");
         std::vector<llvm::Function*> queue;
-        //std::unordered_map<std::string, llvm::Function*> mp;
+        std::vector<GlobalValue*> to_keep;
+
         for (auto &Func: mods[0]->functions()) {
             out << Func.getName().str() << "\n";
             if (Func.getName() == "entrypoint") {
                 queue.push_back(&Func);
+            } else if (external_funcs.find(Func.getName().str()) != external_funcs.end()) {
+                to_keep.push_back(&Func);
             }
             //mp[Func.getName().str()] = &Func;
         }
 
         out << "\nListing\n";
         std::unordered_set<std::string> seen;
-        std::vector<GlobalValue*> to_keep;
 
         seen.insert("entrypoint");
         while (!queue.empty()) {
@@ -2495,6 +2499,8 @@ static void optimizeSBF() {
                 }
             }
         }
+
+
 
         //to_remove.reserve(mp.size());
 //    for (auto it = mp.begin(); it!= mp.end(); it++) {

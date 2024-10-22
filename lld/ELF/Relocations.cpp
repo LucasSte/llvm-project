@@ -744,7 +744,6 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   default:
     llvm_unreachable("");
   }
-  return;
 
   if (msg.empty())
     msg = "undefined " + visibility() + "symbol: " + toString(sym);
