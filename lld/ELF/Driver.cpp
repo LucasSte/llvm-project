@@ -2475,9 +2475,7 @@ static void optimizeSBF() {
         }
 
         for (auto &GV : mods[0]->globals()) {
-            if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
-                to_keep.push_back(&GV);
-            }
+            to_keep.push_back(&GV);
         }
 
         out << "\nListing\n";
