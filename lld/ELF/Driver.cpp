@@ -2478,6 +2478,10 @@ static void optimizeSBF() {
             to_keep.push_back(&GV);
         }
 
+        for (auto &GVA : mods[0]->aliases()) {
+            to_keep.push_back(&GVA);
+        }
+
         out << "\nListing\n";
         std::unordered_set<std::string> seen;
 
