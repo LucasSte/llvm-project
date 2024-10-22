@@ -2460,6 +2460,7 @@ static void optimizeSBF() {
     MPM.run(*mods[0], MAM);
 
     if (hasEntrypoint) {
+        std::unordered_map<std::string, llvm::Function*> to_remove;
         std::ofstream out("/Users/lucasste/Documents/solana-test/lld.txt");
         std::vector<llvm::Function*> queue;
         std::vector<GlobalValue*> to_keep;
@@ -2471,15 +2472,7 @@ static void optimizeSBF() {
             } else if (external_funcs.find(Func.getName().str()) != external_funcs.end()) {
                 to_keep.push_back(&Func);
             }
-            //mp[Func.getName().str()] = &Func;
-        }
-
-        for (auto &GV : mods[0]->globals()) {
-            to_keep.push_back(&GV);
-        }
-
-        for (auto &GVA : mods[0]->aliases()) {
-            to_keep.push_back(&GVA);
+            to_remove[Func.getName().str()] = &Func;
         }
 
         out << "\nListing\n";
@@ -2490,6 +2483,7 @@ static void optimizeSBF() {
             Function *F = &*queue.back();
             out << F->getName().str() << "\n";
             to_keep.push_back(dyn_cast<GlobalValue>(F));
+            to_remove.erase(F->getName().str());
             queue.pop_back();
             F->materialize();
             for (auto &BB : *F) {
@@ -2508,32 +2502,12 @@ static void optimizeSBF() {
             }
         }
 
-        std::unordered_set<std::string> other_funcs = {
-                "core::fmt::num::imp::_$LT$impl$u20$core..fmt..Display$u20$for$u20$u64$GT$::fmt::hd864806e38a812f6",
-                "_$LT$$RF$T$u20$as$u20$core..fmt..Display$GT$::fmt::h25d56b4bbf688620",
-                "_$LT$$RF$T$u20$as$u20$core..fmt..Debug$GT$::fmt::h056d7094079f134e",
-                "_$LT$$RF$T$u20$as$u20$core..fmt..Display$GT$::fmt::h01e7553dc0483bc6",
-                "core::ptr::drop_in_place$LT$alloc..string..String$GT$::h90fb98c924544644",
-                "_$LT$alloc..string..String$u20$as$u20$core..fmt..Write$GT$::write_str::hf5b2ec53165d44ef",
-                "_$LT$alloc..string..String$u20$as$u20$core..fmt..Write$GT$::write_char::h74cd9e1d1ef3fcb3",
-                "core::fmt::Write::write_fmt::ha4f591669b04a631",
-                "core::ptr::drop_in_place$LT$core..fmt..Error$GT$::h78833550cba7952c",
-                "_$LT$core..fmt..Error$u20$as$u20$core..fmt..Debug$GT$::fmt::hcd888bda561bd1c2",
-                "core::ptr::drop_in_place$LT$core..fmt..Error$GT$::h49f6f3e10b17e18a",
-                "_$LT$T$u20$as$u20$core..any..Any$GT$::type_id::hfc065ef2c83cb3c5",
-        };
 
-        for (auto &Func: mods[0]->functions()) {
-            if (other_funcs.find(Func.getName().str()) != other_funcs.end()) {
-                to_keep.push_back(&Func);
-            }
+        std::vector<GlobalValue*> remove_vec;
+        remove_vec.reserve(to_remove.size());
+        for (auto it = to_remove.begin(); it!= to_remove.end(); it++) {
+            remove_vec.push_back(dyn_cast<GlobalValue>(it->second));
         }
-
-
-        //to_remove.reserve(mp.size());
-//    for (auto it = mp.begin(); it!= mp.end(); it++) {
-//        to_remove.push_back(dyn_cast<GlobalValue>(it->second));
-//    }
 
         LoopAnalysisManager LAM2;
         FunctionAnalysisManager FAM2;
@@ -2556,7 +2530,7 @@ static void optimizeSBF() {
         // Create the pass manager.
         // This one corresponds to a typical -O2 optimization pipeline.
         ModulePassManager MPM2;
-        MPM2.addPass(ExtractGVPass(to_keep, false));
+        MPM2.addPass(ExtractGVPass(remove_vec, true));
         MPM2.run(*mods[0], MAM2);
 
         out << "\n\nAfter pass\n";
