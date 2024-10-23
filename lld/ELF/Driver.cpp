@@ -69,8 +69,13 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Transforms/IPO/ExtractGV.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
+#include "llvm/Transforms/IPO/StripSymbols.h"
+#include "llvm/Transforms/IPO/StripDeadPrototypes.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
 #include <cstdlib>
 #include <tuple>
 #include <utility>
@@ -2435,29 +2440,31 @@ static void optimizeSBF() {
         }
     }
 
-    LoopAnalysisManager LAM;
-    FunctionAnalysisManager FAM;
-    CGSCCAnalysisManager CGAM;
-    ModuleAnalysisManager MAM;
+    {
+        LoopAnalysisManager LAM;
+        FunctionAnalysisManager FAM;
+        CGSCCAnalysisManager CGAM;
+        ModuleAnalysisManager MAM;
 
-    // Create the new pass manager builder.
-    // Take a look at the PassBuilder constructor parameters for more
-    // customization, e.g. specifying a TargetMachine or various debugging
-    // options.
-    PassBuilder PB;
+        // Create the new pass manager builder.
+        // Take a look at the PassBuilder constructor parameters for more
+        // customization, e.g. specifying a TargetMachine or various debugging
+        // options.
+        PassBuilder PB;
 
-    // Register all the basic analyses with the managers.
-    PB.registerModuleAnalyses(MAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerLoopAnalyses(LAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+        // Register all the basic analyses with the managers.
+        PB.registerModuleAnalyses(MAM);
+        PB.registerCGSCCAnalyses(CGAM);
+        PB.registerFunctionAnalyses(FAM);
+        PB.registerLoopAnalyses(LAM);
+        PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-    // Create the pass manager.
-    // This one corresponds to a typical -O2 optimization pipeline.
-    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
-    PB.parsePassPipeline(MPM, "globaldce,dce");
-    MPM.run(*mods[0], MAM);
+        // Create the pass manager.
+        // This one corresponds to a typical -O2 optimization pipeline.
+        ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
+        PB.parsePassPipeline(MPM, "globaldce,dce");
+        MPM.run(*mods[0], MAM);
+    }
 
     if (hasEntrypoint) {
         std::unordered_map<std::string, llvm::Function*> to_remove;
@@ -2509,29 +2516,51 @@ static void optimizeSBF() {
             remove_vec.push_back(dyn_cast<GlobalValue>(it->second));
         }
 
-        LoopAnalysisManager LAM2;
-        FunctionAnalysisManager FAM2;
-        CGSCCAnalysisManager CGAM2;
-        ModuleAnalysisManager MAM2;
+        {
+            LoopAnalysisManager LAM2;
+            FunctionAnalysisManager FAM2;
+            CGSCCAnalysisManager CGAM2;
+            ModuleAnalysisManager MAM2;
+            PassBuilder PB2;
 
-        // Create the new pass manager builder.
-        // Take a look at the PassBuilder constructor parameters for more
-        // customization, e.g. specifying a TargetMachine or various debugging
-        // options.
-        PassBuilder PB2;
+            PB2.registerModuleAnalyses(MAM2);
+            PB2.registerCGSCCAnalyses(CGAM2);
+            PB2.registerFunctionAnalyses(FAM2);
+            PB2.registerLoopAnalyses(LAM2);
+            PB2.crossRegisterProxies(LAM2, FAM2, CGAM2, MAM2);
 
-        // Register all the basic analyses with the managers.
-        PB.registerModuleAnalyses(MAM2);
-        PB.registerCGSCCAnalyses(CGAM2);
-        PB.registerFunctionAnalyses(FAM2);
-        PB.registerLoopAnalyses(LAM2);
-        PB.crossRegisterProxies(LAM2, FAM2, CGAM2, MAM2);
+            ModulePassManager MPM2;
+            MPM2.addPass(ExtractGVPass(remove_vec, true));
+            MPM2.run(*mods[0], MAM2);
+        }
 
-        // Create the pass manager.
-        // This one corresponds to a typical -O2 optimization pipeline.
-        ModulePassManager MPM2;
-        MPM2.addPass(ExtractGVPass(remove_vec, true));
-        MPM2.run(*mods[0], MAM2);
+        {
+            LoopAnalysisManager LAM2;
+            FunctionAnalysisManager FAM2;
+            CGSCCAnalysisManager CGAM2;
+            ModuleAnalysisManager MAM2;
+            PassBuilder PB2;
+
+            PB2.registerModuleAnalyses(MAM2);
+            PB2.registerCGSCCAnalyses(CGAM2);
+            PB2.registerFunctionAnalyses(FAM2);
+            PB2.registerLoopAnalyses(LAM2);
+            PB2.crossRegisterProxies(LAM2, FAM2, CGAM2, MAM2);
+
+            ModulePassManager MPM2;
+            MPM2.addPass(GlobalDCEPass());
+            MPM2.addPass(StripDeadDebugInfoPass());
+            MPM2.addPass(StripDeadPrototypesPass());
+
+            std::error_code EC;
+            ToolOutputFile Out("/Users/lucasste/Documents/solana-test/comp.ll", EC, sys::fs::OF_None);
+            MPM2.addPass(PrintModulePass(Out.os(), "", false, false));
+            MPM2.run(*mods[0], MAM2);
+
+            Out.keep();
+        }
+
+
 
         out << "\n\nAfter pass\n";
         for (auto &Func: mods[0]->functions()) {
