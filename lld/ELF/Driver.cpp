@@ -2473,7 +2473,6 @@ static void optimizeSBF() {
     }
 
     if (hasEntrypoint) {
-        std::unordered_map<std::string, llvm::Function*> to_remove;
         std::ofstream out("/Users/lucasste/Documents/solana-test/lld.txt");
         std::vector<llvm::Function*> queue;
         std::vector<GlobalValue*> to_keep;
@@ -2485,7 +2484,6 @@ static void optimizeSBF() {
             } else if (external_funcs.find(Func.getName().str()) != external_funcs.end()) {
                 to_keep.push_back(&Func);
             }
-            to_remove[Func.getName().str()] = &Func;
         }
 
         out << "\nListing\n";
@@ -2496,7 +2494,6 @@ static void optimizeSBF() {
             Function *F = &*queue.back();
             out << F->getName().str() << "\n";
             to_keep.push_back(dyn_cast<GlobalValue>(F));
-            to_remove.erase(F->getName().str());
             queue.pop_back();
             F->materialize();
             for (auto &BB : *F) {
@@ -2505,8 +2502,12 @@ static void optimizeSBF() {
                     Use * op_list = I.getOperandList();
                     for (unsigned i=0; i<num_operands; i++) {
                         if (Function * ff = dyn_cast<Function>(op_list[i].get())) {
-                            to_keep.push_back(dyn_cast<GlobalValue>(ff));
-                            to_remove.erase(ff->getName().str());
+                            if (seen.find(ff->getName().str()) == seen.end()) {
+                                seen.insert(ff->getName().str());
+                                queue.push_back(ff);
+                            }
+                        } else if (GlobalValue * gv = dyn_cast<GlobalValue> (op_list[i].get())) {
+                            to_keep.push_back(gv);
                         }
                     }
                     CallBase *CB = dyn_cast<CallBase>(&I);
@@ -2522,13 +2523,7 @@ static void optimizeSBF() {
                 }
             }
         }
-
-
-        std::vector<GlobalValue*> remove_vec;
-        remove_vec.reserve(to_remove.size());
-        for (auto it = to_remove.begin(); it!= to_remove.end(); it++) {
-            remove_vec.push_back(dyn_cast<GlobalValue>(it->second));
-        }
+        // TODO: Recurse through the type definitions now.
 
         {
             LoopAnalysisManager LAM2;
@@ -2544,7 +2539,7 @@ static void optimizeSBF() {
             PB2.crossRegisterProxies(LAM2, FAM2, CGAM2, MAM2);
 
             ModulePassManager MPM2;
-            MPM2.addPass(ExtractGVPass(remove_vec, true));
+            MPM2.addPass(ExtractGVPass(to_keep, false, true));
             MPM2.run(*mods[0], MAM2);
         }
 
