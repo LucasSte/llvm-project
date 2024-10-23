@@ -2501,6 +2501,14 @@ static void optimizeSBF() {
             F->materialize();
             for (auto &BB : *F) {
                 for (auto &I: BB) {
+                    unsigned num_operands = I.getNumOperands();
+                    Use * op_list = I.getOperandList();
+                    for (unsigned i=0; i<num_operands; i++) {
+                        if (Function * ff = dyn_cast<Function>(op_list[i].get())) {
+                            to_keep.push_back(dyn_cast<GlobalValue>(ff));
+                            to_remove.erase(ff->getName().str());
+                        }
+                    }
                     CallBase *CB = dyn_cast<CallBase>(&I);
                     if (!CB)
                         continue;
