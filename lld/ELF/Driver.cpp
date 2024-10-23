@@ -2426,18 +2426,24 @@ static void optimizeSBF() {
                 Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
             }
         }
+        std::ofstream gv_out("/Users/lucasste/Documents/solana-test/GVS.txt");
         for (auto &GV : mods[0]->globals()) {
+            gv_out << GV.getName().str() << "`\n";
             if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
                 GV.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
                 GV.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
             }
         }
+        gv_out.close();
+        std::ofstream gva_out("/Users/lucasste/Documents/solana-test/GVAS.txt");
         for (auto &GVA : mods[0]->aliases()) {
+            gva_out << GVA.getName().str() << "\n";
             if (!GVA.getName().starts_with("llvm.") && !GVA.getName().starts_with("@llvm")) {
                 GVA.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
                 GVA.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
             }
         }
+        gva_out.close();
     }
 
     {
