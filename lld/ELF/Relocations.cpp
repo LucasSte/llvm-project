@@ -191,18 +191,15 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
 static bool isAbsolute(const Symbol &sym) {
-    std::cout << "Is weak: " << sym.isUndefWeak() << std::endl;
   if (sym.isUndefWeak())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym)) {
-      std::cout << "dr section: " << dr->section << std::endl;
       return dr->section == nullptr; // Absolute symbol.
   }
   return false;
 }
 
 static bool isAbsoluteValue(const Symbol &sym) {
-    std::cout << sym.getName().str() << " a: " << isAbsolute(sym) << " b: " << sym.isTls() << std::endl;
   return isAbsolute(sym) || sym.isTls();
 }
 
