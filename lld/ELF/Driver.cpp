@@ -2527,9 +2527,11 @@ static void optimizeSBF() {
         }
 
         std::ofstream GVOps("/Users/lucasste/Documents/sol-example/GVOps.txt");
+        std::vector<GlobalValue*> GVQueue;
         for (GlobalValue * GV: to_keep) {
             GV->materialize();
             if (GlobalVariable * GVar = dyn_cast <GlobalVariable>(GV)) {
+                seen.insert(GVar->getName().str());
                 GVOps << "Ops of: " << GVar->getName().str() << "\n";
                 Constant * Inits = GVar->getInitializer();
                 if (const ConstantStruct *CS = dyn_cast<ConstantStruct>(Inits)) {
@@ -2539,6 +2541,10 @@ static void optimizeSBF() {
                         if (OpCte->hasName()) {
                             bool isGV = isa<GlobalValue>(OpCte);
                             GVOps << "\t" << OpCte->getName().str() << " Isglobal: " << isGV << "\n";
+                            if (isa<GlobalValue>(OpCte) && seen.find(OpCte->getName().str()) == seen.end()) {
+                                seen.insert(OpCte->getName().str());
+                                GVQueue.push_back(dyn_cast<GlobalValue>(OpCte));
+                            }
                         } else {
                             GVOps << "\tNoName\n";
                         }
@@ -2549,6 +2555,26 @@ static void optimizeSBF() {
             }
         }
         GVOps.close();
+
+        while (!GVQueue.empty()) {
+            GlobalValue * GV = &*GVQueue.back();
+            GVQueue.pop_back();
+            GV->materialize();
+            to_keep.push_back(GV);
+            if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
+                const Constant * Inits = GVar->getInitializer();
+                if (const ConstantStruct *CS = dyn_cast<ConstantStruct>(Inits)) {
+                    unsigned N = CS->getNumOperands();
+                    for (unsigned i=0; i<N; i++) {
+                        Constant *OpCte = CS->getOperand(i);
+                        if (OpCte->hasName() && isa<GlobalValue>(OpCte) && seen.find(OpCte->getName().str()) == seen.end()) {
+                            seen.insert(OpCte->getName().str());
+                            GVQueue.push_back(dyn_cast<GlobalValue>(OpCte));
+                        }
+                    }
+                }
+            }
+        }
 
         {
             LoopAnalysisManager LAM2;
