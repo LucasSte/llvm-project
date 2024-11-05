@@ -2428,7 +2428,9 @@ static void optimizeSBF() {
         }
         std::ofstream gv_out("/Users/lucasste/Documents/sol-example/GVS.txt");
         for (auto &GV : mods[0]->globals()) {
-            gv_out << GV.getName().str() << "`\n";
+            unsigned SubID = GV.getValueID();
+            bool isIFunc = isa<GlobalVariable>(GV);
+            gv_out << GV.getName().str() << " ID: "<< SubID  << "Is GlobalVar: " << isIFunc << "\n";
             if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
                 GV.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
                 GV.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
@@ -2523,7 +2525,30 @@ static void optimizeSBF() {
                 }
             }
         }
-        // TODO: Recurse through the type definitions now.
+
+        std::ofstream GVOps("/Users/lucasste/Documents/sol-example/GVOps.txt");
+        for (GlobalValue * GV: to_keep) {
+            GV->materialize();
+            if (GlobalVariable * GVar = dyn_cast <GlobalVariable>(GV)) {
+                GVOps << "Ops of: " << GVar->getName().str() << "\n";
+                Constant * Inits = GVar->getInitializer();
+                if (const ConstantStruct *CS = dyn_cast<ConstantStruct>(Inits)) {
+                    unsigned N = CS->getNumOperands();
+                    for (unsigned i = 0; i<N; i++) {
+                        Constant * OpCte = CS->getOperand(i);
+                        if (OpCte->hasName()) {
+                            bool isGV = isa<GlobalValue>(OpCte);
+                            GVOps << "\t" << OpCte->getName().str() << " Isglobal: " << isGV << "\n";
+                        } else {
+                            GVOps << "\tNoName\n";
+                        }
+                    }
+                } else {
+                    GVOps << "\tNot a struct\n";
+                }
+            }
+        }
+        GVOps.close();
 
         {
             LoopAnalysisManager LAM2;
