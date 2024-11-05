@@ -2469,8 +2469,8 @@ static void optimizeSBF() {
 
         // Create the pass manager.
         // This one corresponds to a typical -O2 optimization pipeline.
-        ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
-        PB.parsePassPipeline(MPM, "globaldce,dce");
+        ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::Os);
+        PB.parsePassPipeline(MPM, "globaldce,dce"); //,constmerge,deadargelim,dse,globalopt,instcombine");
         MPM.run(*mods[0], MAM);
     }
 
@@ -2592,8 +2592,23 @@ static void optimizeSBF() {
 
         out << "\n\nAfter pass\n";
         for (auto &Func: mods[0]->functions()) {
+            //if (!Func.getName().starts_with("llvm.") && !Func.getName().starts_with("@llvm")) {
+                Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+            //}
             out << Func.getName().str() << "\n";
         }
+
+        for (GlobalValue & GV : mods[0]->globals()) {
+            //if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
+                GV.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+            //}
+        }
+
+//        for (auto &GVA : mods[0]->aliases()) {
+//            if (!GVA.getName().starts_with("llvm.") && !GVA.getName().starts_with("@llvm")) {
+//                GVA.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+//            }
+//        }
 
         std::string targetTriple = mods[0]->getTargetTriple();
         std::string error;
