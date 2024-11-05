@@ -2410,8 +2410,16 @@ static void optimizeSBF() {
         mods.push_back(std::move(mod));
     }
 
-    if (!hasEntrypoint)
+    if (!hasEntrypoint) {
+        for (BitcodeFile * file: ctx.bitcodeFiles) {
+            file->parse();
+        }
+
+        for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
+            file->parseLazy();
+        }
         return;
+    }
 
     std::cout << "Mods size: " << mods.size() << std::endl;
     for (size_t i=1; i<mods.size(); i++) {
