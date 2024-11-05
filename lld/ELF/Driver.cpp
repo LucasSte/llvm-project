@@ -2476,13 +2476,13 @@ static void optimizeSBF() {
 
     if (hasEntrypoint) {
         std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
-        std::vector<llvm::Function*> queue;
+        std::vector<GlobalValue*> queue;
         std::vector<GlobalValue*> to_keep;
 
         for (auto &Func: mods[0]->functions()) {
             out << Func.getName().str() << "\n";
             if (Func.getName() == "entrypoint") {
-                queue.push_back(&Func);
+                queue.push_back(dyn_cast <GlobalValue>(&Func));
             } else if (external_funcs.find(Func.getName().str()) != external_funcs.end()) {
                 to_keep.push_back(&Func);
             }
@@ -2493,83 +2493,51 @@ static void optimizeSBF() {
 
         seen.insert("entrypoint");
         while (!queue.empty()) {
-            Function *F = &*queue.back();
-            out << F->getName().str() << "\n";
-            to_keep.push_back(dyn_cast<GlobalValue>(F));
+            GlobalValue * GV = &*queue.back();
+            to_keep.push_back(GV);
             queue.pop_back();
-            F->materialize();
-            for (auto &BB : *F) {
-                for (auto &I: BB) {
-                    unsigned num_operands = I.getNumOperands();
-                    Use * op_list = I.getOperandList();
-                    for (unsigned i=0; i<num_operands; i++) {
-                        if (Function * ff = dyn_cast<Function>(op_list[i].get())) {
-                            if (seen.find(ff->getName().str()) == seen.end()) {
-                                seen.insert(ff->getName().str());
-                                queue.push_back(ff);
+            if (Function * F = dyn_cast<Function>(GV)) {
+                out << "Func: " << F->getName().str() << "\n";
+                F->materialize();
+                for (auto &BB : *F) {
+                    for (auto &I: BB) {
+                        unsigned num_operands = I.getNumOperands();
+                        Use * op_list = I.getOperandList();
+                        for (unsigned i=0; i<num_operands; i++) {
+                            if (GlobalValue * gv = dyn_cast<GlobalValue> (op_list[i].get())) {
+                                if (seen.find(gv->getName().str()) == seen.end()) {
+                                    seen.insert(gv->getName().str());
+                                    queue.push_back(gv);
+                                }
                             }
-                        } else if (GlobalValue * gv = dyn_cast<GlobalValue> (op_list[i].get())) {
-                            to_keep.push_back(gv);
                         }
+                        CallBase *CB = dyn_cast<CallBase>(&I);
+                        if (!CB)
+                            continue;
+                        Function *CF = CB->getCalledFunction();
+                        if (!CF)
+                            continue;
+                        if (CF->isDeclaration() || seen.find(CF->getName().str()) != seen.end())
+                            continue;
+                        seen.insert(CF->getName().str());
+                        queue.push_back(CF);
                     }
-                    CallBase *CB = dyn_cast<CallBase>(&I);
-                    if (!CB)
-                        continue;
-                    Function *CF = CB->getCalledFunction();
-                    if (!CF)
-                        continue;
-                    if (CF->isDeclaration() || seen.find(CF->getName().str()) != seen.end())
-                        continue;
-                    seen.insert(CF->getName().str());
-                    queue.push_back(CF);
                 }
-            }
-        }
-
-        std::ofstream GVOps("/Users/lucasste/Documents/sol-example/GVOps.txt");
-        std::vector<GlobalValue*> GVQueue;
-        for (GlobalValue * GV: to_keep) {
-            GV->materialize();
-            if (GlobalVariable * GVar = dyn_cast <GlobalVariable>(GV)) {
-                seen.insert(GVar->getName().str());
-                GVOps << "Ops of: " << GVar->getName().str() << "\n";
-                Constant * Inits = GVar->getInitializer();
+            } else if (GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
+                GVar->materialize();
+                const Constant * Inits = GVar->getInitializer();
+                out << "Ops of: " << GVar->getName().str() << "\n";
                 if (const ConstantStruct *CS = dyn_cast<ConstantStruct>(Inits)) {
                     unsigned N = CS->getNumOperands();
                     for (unsigned i = 0; i<N; i++) {
                         Constant * OpCte = CS->getOperand(i);
                         if (OpCte->hasName()) {
                             bool isGV = isa<GlobalValue>(OpCte);
-                            GVOps << "\t" << OpCte->getName().str() << " Isglobal: " << isGV << "\n";
+                            out << "\t" << OpCte->getName().str() << " Isglobal: " << isGV << "\n";
                             if (isa<GlobalValue>(OpCte) && seen.find(OpCte->getName().str()) == seen.end()) {
                                 seen.insert(OpCte->getName().str());
-                                GVQueue.push_back(dyn_cast<GlobalValue>(OpCte));
+                                queue.push_back(dyn_cast<GlobalValue>(OpCte));
                             }
-                        } else {
-                            GVOps << "\tNoName\n";
-                        }
-                    }
-                } else {
-                    GVOps << "\tNot a struct\n";
-                }
-            }
-        }
-        GVOps.close();
-
-        while (!GVQueue.empty()) {
-            GlobalValue * GV = &*GVQueue.back();
-            GVQueue.pop_back();
-            GV->materialize();
-            to_keep.push_back(GV);
-            if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
-                const Constant * Inits = GVar->getInitializer();
-                if (const ConstantStruct *CS = dyn_cast<ConstantStruct>(Inits)) {
-                    unsigned N = CS->getNumOperands();
-                    for (unsigned i=0; i<N; i++) {
-                        Constant *OpCte = CS->getOperand(i);
-                        if (OpCte->hasName() && isa<GlobalValue>(OpCte) && seen.find(OpCte->getName().str()) == seen.end()) {
-                            seen.insert(OpCte->getName().str());
-                            GVQueue.push_back(dyn_cast<GlobalValue>(OpCte));
                         }
                     }
                 }
