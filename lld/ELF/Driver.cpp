@@ -2384,11 +2384,17 @@ static void optimizeSBF() {
     LLVMContext context;
 
     std::vector<std::unique_ptr<Module>> mods;
+    bool hasEntrypoint = false;
     for (BitcodeFile * file: ctx.bitcodeFiles) {
         if (file->getName().contains("compiler_builtins")) {
             continue;
         }
         auto mod = llvm::parseIR(file->mb, Err, context);
+        for (auto & Func: mod->functions()) {
+            if (Func.getName() == "entrypoint") {
+                hasEntrypoint = true;
+            }
+        }
         mods.push_back(std::move(mod));
     }
     for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
@@ -2396,20 +2402,22 @@ static void optimizeSBF() {
             continue;
         }
         auto mod = llvm::parseIR(file->mb, Err, context);
+        for (auto & Func: mod->functions()) {
+            if (Func.getName() == "entrypoint") {
+                hasEntrypoint = true;
+            }
+        }
         mods.push_back(std::move(mod));
     }
+
+    if (!hasEntrypoint)
+        return;
 
     std::cout << "Mods size: " << mods.size() << std::endl;
     for (size_t i=1; i<mods.size(); i++) {
         Linker::linkModules(*mods[0], std::move(mods[i]), Linker::Flags::OverrideFromSrc);
     }
 
-    bool hasEntrypoint = false;
-    for (auto & Func: mods[0]->functions()) {
-        if (Func.getName() == "entrypoint") {
-            hasEntrypoint = true;
-        }
-    }
 
     std::unordered_set<std::string> external_funcs = {"entrypoint", "abort", "sol_log_"};
 
