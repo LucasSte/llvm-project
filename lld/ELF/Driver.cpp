@@ -2426,7 +2426,7 @@ static void optimizeSBF() {
                 Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
             }
         }
-        std::ofstream gv_out("/Users/lucasste/Documents/solana-test/GVS.txt");
+        std::ofstream gv_out("/Users/lucasste/Documents/sol-example/GVS.txt");
         for (auto &GV : mods[0]->globals()) {
             gv_out << GV.getName().str() << "`\n";
             if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
@@ -2435,7 +2435,7 @@ static void optimizeSBF() {
             }
         }
         gv_out.close();
-        std::ofstream gva_out("/Users/lucasste/Documents/solana-test/GVAS.txt");
+        std::ofstream gva_out("/Users/lucasste/Documents/sol-example/GVAS.txt");
         for (auto &GVA : mods[0]->aliases()) {
             gva_out << GVA.getName().str() << "\n";
             if (!GVA.getName().starts_with("llvm.") && !GVA.getName().starts_with("@llvm")) {
@@ -2473,7 +2473,7 @@ static void optimizeSBF() {
     }
 
     if (hasEntrypoint) {
-        std::ofstream out("/Users/lucasste/Documents/solana-test/lld.txt");
+        std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
         std::vector<llvm::Function*> queue;
         std::vector<GlobalValue*> to_keep;
 
@@ -2562,7 +2562,7 @@ static void optimizeSBF() {
             MPM2.addPass(StripDeadPrototypesPass());
 
             std::error_code EC;
-            ToolOutputFile Out("/Users/lucasste/Documents/solana-test/comp.ll", EC, sys::fs::OF_None);
+            ToolOutputFile Out("/Users/lucasste/Documents/sol-example/comp.ll", EC, sys::fs::OF_None);
             MPM2.addPass(PrintModulePass(Out.os(), "", false, false));
             MPM2.run(*mods[0], MAM2);
 
@@ -2584,7 +2584,7 @@ static void optimizeSBF() {
         op.DataSections = true;
         auto TheTargetMachine = Target->createTargetMachine(
                 targetTriple, "v1", "", op, Reloc::Model::PIC_);
-        auto Filename = "/Users/lucasste/Documents/solana-test/comp.s";
+        auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
         std::error_code EC;
         raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
         legacy::PassManager pass;
@@ -3059,7 +3059,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
   if (!ctx.bitcodeFiles.empty()) {
-      std::ofstream out("/Users/lucasste/Documents/solana-test/libcallsym.txt");
+      std::ofstream out("/Users/lucasste/Documents/sol-example/libcallsym.txt");
       for (auto *s : lto::LTO::getRuntimeLibcallSymbols()) {
           handleLibcall(s, out);
       }
