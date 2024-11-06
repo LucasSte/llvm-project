@@ -2427,7 +2427,10 @@ static void optimizeSBF() {
     }
 
 
-    std::unordered_set<std::string> external_funcs = {"entrypoint", "abort", "sol_log_"};
+    std::unordered_set<std::string> external_funcs = {
+            "entrypoint", "abort", "sol_log_", "sol_memcpy_", "sol_get_rent_sysvar", "sol_try_find_program_address",
+            "sol_invoke_signed_rust", "sol_create_program_address", "sol_log_pubkey"
+    };
 
     //TODO: Once this is working, try with dynamic dispatch and function pointers.
     if (hasEntrypoint) {
