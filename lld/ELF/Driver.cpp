@@ -2385,8 +2385,18 @@ static void optimizeSBF() {
 
     std::vector<std::unique_ptr<Module>> mods;
     bool hasEntrypoint = false;
+
+    std::unordered_set<std::string> external_funcs = {
+            "entrypoint", "abort", "sol_log_", "sol_memcpy_", "sol_get_rent_sysvar", "sol_try_find_program_address",
+            "sol_invoke_signed_rust", "sol_create_program_address", "sol_log_pubkey", "sol_sha256"
+    };
+
     for (BitcodeFile * file: ctx.bitcodeFiles) {
         if (file->getName().contains("compiler_builtins")) {
+            auto mod = llvm::parseIR(file->mb, Err, context);
+            for (auto & Func: mod->functions()) {
+                external_funcs.insert(Func.getName().str());
+            }
             continue;
         }
         auto mod = llvm::parseIR(file->mb, Err, context);
@@ -2399,6 +2409,10 @@ static void optimizeSBF() {
     }
     for (BitcodeFile * file: ctx.lazyBitcodeFiles) {
         if (file->getName().contains("compiler_builtins")) {
+            auto mod = llvm::parseIR(file->mb, Err, context);
+            for (auto & Func: mod->functions()) {
+                external_funcs.insert(Func.getName().str());
+            }
             continue;
         }
         auto mod = llvm::parseIR(file->mb, Err, context);
@@ -2427,10 +2441,6 @@ static void optimizeSBF() {
     }
 
 
-    std::unordered_set<std::string> external_funcs = {
-            "entrypoint", "abort", "sol_log_", "sol_memcpy_", "sol_get_rent_sysvar", "sol_try_find_program_address",
-            "sol_invoke_signed_rust", "sol_create_program_address", "sol_log_pubkey"
-    };
 
     //TODO: Once this is working, try with dynamic dispatch and function pointers.
     if (hasEntrypoint) {
@@ -2611,23 +2621,8 @@ static void optimizeSBF() {
 
         out << "\n\nAfter pass\n";
         for (auto &Func: mods[0]->functions()) {
-            //if (!Func.getName().starts_with("llvm.") && !Func.getName().starts_with("@llvm")) {
-//                Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
-            //}
             out << Func.getName().str() << "\n";
         }
-
-//        for (GlobalValue & GV : mods[0]->globals()) {
-//            //if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
-//                GV.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
-//            //}
-//        }
-//
-//        for (auto &GVA : mods[0]->aliases()) {
-//            if (!GVA.getName().starts_with("llvm.") && !GVA.getName().starts_with("@llvm")) {
-//                GVA.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
-//            }
-//        }
 
         std::string targetTriple = mods[0]->getTargetTriple();
         std::string error;
