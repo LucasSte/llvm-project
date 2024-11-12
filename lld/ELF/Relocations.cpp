@@ -57,6 +57,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
+#include <fstream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1491,8 +1492,11 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     }
   }
 
-  dbgs() << "Processing aux for " << sym.getName().str() << "\n";
+  std::ofstream outfile;
+  outfile.open("/Users/lucasste/Documents/sol-example/symbols-for.txt", std::ios_base::app);
+  outfile << "Processing aux for " << sym.getName().str() << "\n";
   processAux(expr, type, offset, sym, addend);
+  outfile.close();
 }
 
 // R_PPC64_TLSGD/R_PPC64_TLSLD is required to mark `bl __tls_get_addr` for
