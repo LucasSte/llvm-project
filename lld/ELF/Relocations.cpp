@@ -1121,11 +1121,18 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // -shared matches the spirit of its -z undefs default. -pie has freedom on
   // choices, and we choose dynamic relocations to be consistent with the
   // handling of GOT-generating relocations.
-  if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
+    std::ofstream outfile;
+    outfile.open("/Users/lucasste/Documents/sol-example/symbols-for.txt", std::ios_base::app);
+    if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
       (!config->isPic && sym.isUndefWeak())) {
+    outfile << "\t Static linked: " << sym.getName().str() << " addend: " << addend << "\n";
     sec->addReloc({expr, type, offset, addend, &sym});
     return;
-  }
+  } else {
+    outfile << "\t Not static linked: " << sym.getName().str() << "\n";
+    outfile << "\t is static: " << isStaticLinkTimeConstant(expr, type, sym, offset) << " is preemptible: " << (int)sym.isPreemptible << "\n";
+    }
+    outfile.close();
 
   // Use a simple -z notext rule that treats all sections except .eh_frame as
   // writable. GNU ld does not produce dynamic relocations in .eh_frame (and our
@@ -1492,11 +1499,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     }
   }
 
-  std::ofstream outfile;
-  outfile.open("/Users/lucasste/Documents/sol-example/symbols-for.txt", std::ios_base::app);
-  outfile << "Processing aux for " << sym.getName().str() << "\n";
   processAux(expr, type, offset, sym, addend);
-  outfile.close();
 }
 
 // R_PPC64_TLSGD/R_PPC64_TLSLD is required to mark `bl __tls_get_addr` for
