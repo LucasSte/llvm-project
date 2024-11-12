@@ -68,6 +68,8 @@
 #include <cstdlib>
 #include <tuple>
 #include <utility>
+#include <iostream>
+#include <fstream>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -2047,10 +2049,11 @@ static void handleUndefinedGlob(StringRef arg) {
     handleUndefined(sym, "--undefined-glob");
 }
 
-static void handleLibcall(StringRef name) {
-  Symbol *sym = symtab.find(name);
-  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
-    sym->extract();
+static void handleLibcall(StringRef name, std::ofstream &out) {
+    out << name.str() << "\n";
+    Symbol *sym = symtab.find(name);
+    if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+        sym->extract();
 }
 
 static void writeArchiveStats() {
@@ -2764,9 +2767,13 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
-      handleLibcall(s);
+    if (!ctx.bitcodeFiles.empty()) {
+        std::ofstream out("/Users/lucasste/Documents/sol-example/libcallsym.txt");
+        for (auto *s : lto::LTO::getRuntimeLibcallSymbols()) {
+            handleLibcall(s, out);
+        }
+        out.close();
+    }
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
