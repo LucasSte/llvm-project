@@ -1491,6 +1491,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     }
   }
 
+  dbgs() << "Processing aux for " << sym.getName().str() << "\n";
   processAux(expr, type, offset, sym, addend);
 }
 
