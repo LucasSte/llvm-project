@@ -2705,6 +2705,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // add files to the link, via autolinking, these files are always
   // appended to the Files vector.
   {
+      bool is_solana = false;
     llvm::TimeTraceScope timeScope("Parse input files");
     for (size_t i = 0; i < files.size(); ++i) {
       llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
