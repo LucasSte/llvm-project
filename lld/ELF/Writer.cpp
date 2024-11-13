@@ -31,6 +31,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <climits>
+#include <fstream>
 
 #define DEBUG_TYPE "lld"
 
@@ -3040,6 +3041,16 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
       if (sec->type == SHT_REL || sec->type == SHT_RELA)
         sec->checkDynRelAddends(Out::bufferStart);
   }
+
+  std::ofstream sm_out("/Users/lucasste/Documents/sol-example/symbols_dump.txt");
+  for (const Symbol * sym: symtab.getSymbols()) {
+      if (sym) {
+          if (const Defined * def = dyn_cast<Defined>(sym)) {
+              sm_out << def->getName().str() << " size: " << def->size << " val: " << def->value << "\n";
+          }
+      }
+  }
+  sm_out.close();
 }
 
 // Computes a hash value of Data using a given hash function.
