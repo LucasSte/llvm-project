@@ -2060,8 +2060,7 @@ static void handleUndefinedGlob(StringRef arg) {
     handleUndefined(sym, "--undefined-glob");
 }
 
-static void handleLibcall(StringRef name, std::ofstream &out) {
-  out << name.str() << "\n";
+static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
   if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
     sym->extract();
@@ -2370,12 +2369,6 @@ static void markBuffersAsDontNeed(bool skipLinkedOutput) {
       mb.dontNeedIfMmap();
 }
 
-/* TODO List:
- * 1. Make sure I emit the entrypoint first
- * 2. Test with the escrow contract
- * 3. Test with Rust function pointers
- * 4. Test with Rust dynamic dispatch tables (dyn)
- */
 static void optimizeSBF() {
     if (config->emachine != EM_BPF && config->emachine != EM_SBF)
         return;
@@ -2435,17 +2428,12 @@ static void optimizeSBF() {
         return;
     }
 
-    std::cout << "Mods size: " << mods.size() << std::endl;
     for (size_t i=1; i<mods.size(); i++) {
         Linker::linkModules(*mods[0], std::move(mods[i]), Linker::Flags::OverrideFromSrc);
     }
 
-
-
-    //TODO: Once this is working, try with dynamic dispatch and function pointers.
     if (hasEntrypoint) {
         for (auto &Func: mods[0]->functions()) {
-            //        std::cout << "Func names: " << Func.getName().str() << std::endl;
             if (external_funcs.find(Func.getName().str()) == external_funcs.end()) {
                 if (!Func.getName().starts_with("llvm.") && !Func.getName().starts_with("@llvm")) {
                     Func.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
@@ -2455,26 +2443,20 @@ static void optimizeSBF() {
                 Func.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
             }
         }
-        std::ofstream gv_out("/Users/lucasste/Documents/sol-example/GVS.txt");
         for (auto &GV : mods[0]->globals()) {
             unsigned SubID = GV.getValueID();
             bool isIFunc = isa<GlobalVariable>(GV);
-            gv_out << GV.getName().str() << " ID: "<< SubID  << "Is GlobalVar: " << isIFunc << "\n";
             if (!GV.getName().starts_with("llvm.") && !GV.getName().starts_with("@llvm")) {
                 GV.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
                 GV.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
             }
         }
-        gv_out.close();
-        std::ofstream gva_out("/Users/lucasste/Documents/sol-example/GVAS.txt");
         for (auto &GVA : mods[0]->aliases()) {
-            gva_out << GVA.getName().str() << "\n";
             if (!GVA.getName().starts_with("llvm.") && !GVA.getName().starts_with("@llvm")) {
                 GVA.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
                 GVA.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
             }
         }
-        gva_out.close();
     }
 
     {
@@ -2483,33 +2465,24 @@ static void optimizeSBF() {
         CGSCCAnalysisManager CGAM;
         ModuleAnalysisManager MAM;
 
-        // Create the new pass manager builder.
-        // Take a look at the PassBuilder constructor parameters for more
-        // customization, e.g. specifying a TargetMachine or various debugging
-        // options.
         PassBuilder PB;
 
-        // Register all the basic analyses with the managers.
         PB.registerModuleAnalyses(MAM);
         PB.registerCGSCCAnalyses(CGAM);
         PB.registerFunctionAnalyses(FAM);
         PB.registerLoopAnalyses(LAM);
         PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-        // Create the pass manager.
-        // This one corresponds to a typical -O2 optimization pipeline.
         ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::Os);
         PB.parsePassPipeline(MPM, "globaldce,dce"); //,constmerge,deadargelim,dse,globalopt,instcombine");
         MPM.run(*mods[0], MAM);
     }
 
     if (hasEntrypoint) {
-        std::ofstream out("/Users/lucasste/Documents/sol-example/lld.txt");
         std::vector<GlobalValue*> queue;
         std::vector<GlobalValue*> to_keep;
 
         for (auto &Func: mods[0]->functions()) {
-            out << Func.getName().str() << "\n";
             if (Func.getName() == "entrypoint") {
                 queue.push_back(dyn_cast <GlobalValue>(&Func));
             } else if (external_funcs.find(Func.getName().str()) != external_funcs.end()) {
@@ -2517,16 +2490,13 @@ static void optimizeSBF() {
             }
         }
 
-        out << "\nListing\n";
         std::unordered_set<std::string> seen;
-
         seen.insert("entrypoint");
         while (!queue.empty()) {
             GlobalValue * GV = &*queue.back();
             to_keep.push_back(GV);
             queue.pop_back();
             if (Function * F = dyn_cast<Function>(GV)) {
-                out << "Func: " << F->getName().str() << "\n";
                 F->materialize();
                 for (auto &BB : *F) {
                     for (auto &I: BB) {
@@ -2555,14 +2525,11 @@ static void optimizeSBF() {
             } else if (GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
                 GVar->materialize();
                 const Constant * Inits = GVar->getInitializer();
-                out << "Ops of: " << GVar->getName().str() << "\n";
                 if (const ConstantStruct *CS = dyn_cast<ConstantStruct>(Inits)) {
                     unsigned N = CS->getNumOperands();
                     for (unsigned i = 0; i<N; i++) {
                         Constant * OpCte = CS->getOperand(i);
                         if (OpCte->hasName()) {
-                            bool isGV = isa<GlobalValue>(OpCte);
-                            out << "\t" << OpCte->getName().str() << " Isglobal: " << isGV << "\n";
                             if (isa<GlobalValue>(OpCte) && seen.find(OpCte->getName().str()) == seen.end()) {
                                 seen.insert(OpCte->getName().str());
                                 queue.push_back(dyn_cast<GlobalValue>(OpCte));
@@ -2610,18 +2577,11 @@ static void optimizeSBF() {
             MPM2.addPass(StripDeadPrototypesPass());
 
             std::error_code EC;
-            ToolOutputFile Out("/Users/lucasste/Documents/sol-example/comp.ll", EC, sys::fs::OF_None);
+            ToolOutputFile Out(config->outputFile.str() + ".lucas_llvm_ir.ll", EC, sys::fs::OF_None);
             MPM2.addPass(PrintModulePass(Out.os(), "", false, false));
             MPM2.run(*mods[0], MAM2);
 
             Out.keep();
-        }
-
-
-
-        out << "\n\nAfter pass\n";
-        for (auto &Func: mods[0]->functions()) {
-            out << Func.getName().str() << "\n";
         }
 
         std::string targetTriple = mods[0]->getTargetTriple();
@@ -2632,23 +2592,18 @@ static void optimizeSBF() {
         op.DataSections = true;
         auto TheTargetMachine = Target->createTargetMachine(
                 targetTriple, "v1", "", op, Reloc::Model::PIC_);
-        auto Filename = "/Users/lucasste/Documents/sol-example/comp.s";
+        auto Filename = config->outputFile.str() + ".lucas_asm.s";
         std::error_code EC;
         raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
         legacy::PassManager pass;
         TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, CodeGenFileType::AssemblyFile);
-        std::cout << "Regenerating code!" << std::endl;
         pass.run(*mods[0]);
 
-        out << "\n\nAfter codegen\n";
+        std::ofstream linked_functions(config->outputFile.str() + ".lucas_funcs.txt");
         for (auto &Func: mods[0]->functions()) {
-            out << Func.getName().str() << "\n";
+            linked_functions << Func.getName().str() << "\n";
         }
-
-        out << "\n\nSymbolTable\n";
-
-
-        out.close();
+        linked_functions.close();
         dest.flush();
     }
 
@@ -2657,17 +2612,11 @@ static void optimizeSBF() {
     bw.writeModule(*mods[0]);
     bw.writeSymtab();
     bw.writeStrtab();
-    //  std::cout << "Buffer written: " << buf.size() << std::endl;
-    //
     StringRef str_ref(reinterpret_cast<const char*>(buf.data()), buf.size());
     BitcodeFile * in = ctx.bitcodeFiles[0];
-    //
     MemoryBufferRef buf_ref(str_ref, in->mb.getBufferIdentifier());
-//    //  std::cout << "Is eq: " << std::memcmp(buf_ref.getBuffer().data(), in->mb.getBuffer().data(), buf.size()) << std::endl;
-//    //  std::cout << "About to read" << std::endl;
     BitcodeFile * ptr = new BitcodeFile(buf_ref, in->archiveName, 0, false);
-//    std::cout << "About to parse" << std::endl;
-//    // Ideally I'd call delete here
+
     std::vector<BitcodeFile*> file_keep;
     for (BitcodeFile * file: ctx.bitcodeFiles) {
         if (file->getName().contains("compiler_builtins")) {
@@ -3106,13 +3055,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty()) {
-      std::ofstream out("/Users/lucasste/Documents/sol-example/libcallsym.txt");
-      for (auto *s : lto::LTO::getRuntimeLibcallSymbols()) {
-          handleLibcall(s, out);
-      }
-      out.close();
-  }
+  if (!ctx.bitcodeFiles.empty())
+      for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+          handleLibcall(s);
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
