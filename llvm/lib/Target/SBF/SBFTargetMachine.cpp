@@ -120,7 +120,11 @@ void SBFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                     OptimizationLevel Level) {
     FPM.addPass(SimplifyCFGPass(
         SimplifyCFGOptions().hoistCommonInsts(true).convertSwitchToLookupTable(
-            true)));
+                                                       true)
+            .sinkCommonInsts(true)
+            .forwardSwitchCondToPhi(true)
+            .convertSwitchRangeToICmp(true)
+            ));
   });
 }
 
