@@ -28,7 +28,7 @@ class Ri<bits<16> Enc, string n, list<Register> subregs>
   let SubRegIndices = [sub_32];
 }
 
-foreach I = 0-10 in {
+foreach I = 0-15 in {
   // 32-bit Integer (alias to low part of 64-bit register).
   def W#I  : Wi<I,  "w"#I>,  DwarfRegNum<[I]>;
   // 64-bit Integer registers
