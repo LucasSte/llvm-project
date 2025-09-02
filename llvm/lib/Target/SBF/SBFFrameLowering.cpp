@@ -50,4 +50,9 @@ void SBFFrameLowering::determineCalleeSaves(MachineFunction &MF,
   SavedRegs.reset(SBF::R7);
   SavedRegs.reset(SBF::R8);
   SavedRegs.reset(SBF::R9);
+  SavedRegs.reset(SBF::R11);
+  SavedRegs.reset(SBF::R12);
+  SavedRegs.reset(SBF::R13);
+  SavedRegs.reset(SBF::R14);
+  SavedRegs.reset(SBF::R15);
 }
