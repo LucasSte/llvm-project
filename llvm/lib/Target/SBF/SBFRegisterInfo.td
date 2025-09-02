@@ -39,11 +39,13 @@ foreach I = 0-15 in {
 def GPR32 : RegisterClass<"SBF", [i32], 64, (add
   (sequence "W%u", 1, 9),
   W0, // Return value
-  W10  // Frame Ptr
+  W10,  // Frame Ptr
+  (sequence "W%u", 11, 15)
 )>;
 
 def GPR : RegisterClass<"SBF", [i64], 64, (add
   (sequence "R%u", 1, 9),
   R0, // Return value
-  R10  // Frame Ptr
+  R10,  // Frame Ptr
+  (sequence "R%u", 11, 15)
 )>;
