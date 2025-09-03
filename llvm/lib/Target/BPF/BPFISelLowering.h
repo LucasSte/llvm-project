@@ -161,6 +161,13 @@ private:
                                                         MachineBasicBlock *BB)
                                                         const;
 
+  /// Returns true if arguments should be sign-extended in lib calls.
+  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool IsVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context) const override;
 };
 }
 

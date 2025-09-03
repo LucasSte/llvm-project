@@ -75,6 +75,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
 
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
+
   // Set unsupported atomic operations as Custom so
   // we can emit better error messages than fatal error
   // from selectiondag.
@@ -338,6 +340,9 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_XOR:
     return LowerATOMICRMW(Op, DAG);
+  case ISD::INTRINSIC_W_CHAIN:
+    // continue the expansion as defined with tablegen
+    return SDValue();
   }
 }
 
@@ -704,6 +709,19 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          InVals);
 }
 
+bool BPFTargetLowering::shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
+  return IsSigned || Type == MVT::i32;
+}
+
+bool BPFTargetLowering::CanLowerReturn(
+    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+  // At minimal return Outs.size() <= 1, or check valid types in CC.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
+}
+
 SDValue
 BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
@@ -763,10 +781,8 @@ SDValue BPFTargetLowering::LowerCallResult(
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
   if (Ins.size() > 1) {
-    fail(DL, DAG, "only small returns supported");
-    for (auto &In : Ins)
-      InVals.push_back(DAG.getConstant(0, DL, In.VT));
-    return DAG.getCopyFromReg(Chain, DL, 1, Ins[0].VT, InGlue).getValue(1);
+    fail(DL, DAG, "Only a single return supported");
+    assert(false);
   }
 
   CCInfo.AnalyzeCallResult(Ins, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
