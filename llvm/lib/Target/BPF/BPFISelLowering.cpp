@@ -105,10 +105,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::SDIVREM, VT, Expand);
     setOperationAction(ISD::UDIVREM, VT, Expand);
-    if (!STI.hasSdivSmod()) {
-      setOperationAction(ISD::SDIV, VT, Custom);
-      setOperationAction(ISD::SREM, VT, Custom);
-    }
+//    if (!STI.hasSdivSmod()) {
+//      setOperationAction(ISD::SDIV, VT, Custom);
+//      setOperationAction(ISD::SREM, VT, Custom);
+//    }
     setOperationAction(ISD::MULHU, VT, Expand);
     setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
@@ -321,9 +321,9 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerConstantPool(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
-  case ISD::SDIV:
-  case ISD::SREM:
-    return LowerSDIVSREM(Op, DAG);
+//  case ISD::SDIV:
+//  case ISD::SREM:
+//    return LowerSDIVSREM(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::ATOMIC_SWAP:
