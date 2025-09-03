@@ -995,6 +995,13 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   bool isMemcpyOp = Opc == BPF::MEMCPY;
 
+  bool isAtomicFence = Opc == BPF::ATOMIC_FENCE;
+  if (isAtomicFence) {
+    // this is currently a nop
+    MI.eraseFromParent();
+    return BB;
+  }
+
 #ifndef NDEBUG
   bool isSelectRIOp = (Opc == BPF::Select_Ri ||
                        Opc == BPF::Select_Ri_64_32 ||

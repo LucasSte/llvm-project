@@ -1184,3 +1184,11 @@ let usesCustomInserter = 1, isCodeGenOnly = 1 in {
       "#memcpy dst: $dst, src: $src, len: $len, align: $align",
       [(BPFmemcpy GPR:$dst, GPR:$src, imm:$len, imm:$align)]>;
 }
+
+let usesCustomInserter = 1, isCodeGenOnly = 1 in {
+  def ATOMIC_FENCE : Pseudo<
+    (outs),
+    (ins),
+    "#atomic_fence",
+    [(atomic_fence timm, timm)]>;
+}
