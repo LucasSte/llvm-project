@@ -30,7 +30,7 @@ using namespace llvm;
 static cl::opt<int>
     BPFStackSizeOption("bpf-stack-size",
                        cl::desc("Specify the BPF stack size limit"),
-                       cl::init(512));
+                       cl::init(4096));
 
 BPFRegisterInfo::BPFRegisterInfo()
     : BPFGenRegisterInfo(BPF::R0) {}
