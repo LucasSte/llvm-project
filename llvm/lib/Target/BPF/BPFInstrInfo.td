@@ -664,9 +664,9 @@ class CALLX<string OpcodeStr>
                    (ins GPR:$BrDst),
                    !strconcat(OpcodeStr, " $BrDst"),
                    []> {
-  bits<4> BrDst;
+  bits<32> BrDst;
 
-  let Inst{51-48} = BrDst;
+  let Inst{31-0} = BrDst;
   let BPFClass = BPF_JMP;
 }
 
