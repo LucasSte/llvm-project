@@ -105,6 +105,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::SDIVREM, VT, Expand);
     setOperationAction(ISD::UDIVREM, VT, Expand);
+    setOperationAction(ISD::SDIV, VT, Expand);
+    setOperationAction(ISD::SREM, VT, Expand);
 //    if (!STI.hasSdivSmod()) {
 //      setOperationAction(ISD::SDIV, VT, Custom);
 //      setOperationAction(ISD::SREM, VT, Custom);
