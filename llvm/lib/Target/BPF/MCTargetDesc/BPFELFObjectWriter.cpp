@@ -27,9 +27,19 @@ public:
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
+
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override;
+
 };
 
 } // end anonymous namespace
+
+bool BPFELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
+                                                 const MCSymbol &Sym,
+                                                 unsigned Type) const {
+  return true;
+}
 
 BPFELFObjectWriter::BPFELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_BPF,
@@ -49,7 +59,7 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     // CALL instruction.
     return ELF::R_BPF_64_32;
   case FK_Data_8:
-    return ELF::R_BPF_64_ABS64;
+    return ELF::R_BPF_64_64;
   case FK_Data_4:
     if (const MCSymbolRefExpr *A = Target.getSymA()) {
       const MCSymbol &Sym = A->getSymbol();
