@@ -66,6 +66,12 @@ protected:
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm;
 
+  bool IsAbiV2;
+
+  bool HasStaticSyscalls;
+
+  bool HasDynamicFrames;
+
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;

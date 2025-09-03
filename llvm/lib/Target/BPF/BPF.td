@@ -27,6 +27,15 @@ def ALU32 : SubtargetFeature<"alu32", "HasAlu32", "true",
 def DwarfRIS: SubtargetFeature<"dwarfris", "UseDwarfRIS", "true",
                                "Disable MCAsmInfo DwarfUsesRelocationsAcrossSections">;
 
+def FeatureAbiV2 : SubtargetFeature<"abi-v2", "IsAbiV2",
+                                       "true", "Enables AbiV2 in SBF (no-op in LLVM)">;
+
+def FeatureStaticSyscalls : SubtargetFeature<"static-syscalls", "HasStaticSyscalls", "true",
+                                   "Enable static syscalls">;
+
+def FeatureDynamicFrames : SubtargetFeature<"dynamic-frames", "HasDynamicFrames", "true",
+                                            "Enable dynamic frames">;
+
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;
