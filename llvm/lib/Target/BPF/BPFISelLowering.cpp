@@ -719,31 +719,35 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
+  if (Outs.size() > 1) {
+    fail(DL, DAG, "Only a single return supported");
+    assert(false);
+  }
+
   // Analize return values.
   CCInfo.AnalyzeReturn(Outs, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
 
-  SDValue Glue;
+  SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // Copy the result values into the output registers.
-  for (size_t i = 0; i != RVLocs.size(); ++i) {
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
     CCValAssign &VA = RVLocs[i];
-    if (!VA.isRegLoc())
-      report_fatal_error("stack return values are not supported");
+    assert(VA.isRegLoc() && "Can only return in registers!");
 
-    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[i], Glue);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[i], Flag);
 
     // Guarantee that all emitted copies are stuck together,
     // avoiding something bad.
-    Glue = Chain.getValue(1);
+    Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
   RetOps[0] = Chain; // Update chain.
 
-  // Add the glue if we have it.
-  if (Glue.getNode())
-    RetOps.push_back(Glue);
+  // Add the flag if we have it.
+  if (Flag.getNode())
+    RetOps.push_back(Flag);
 
   return DAG.getNode(Opc, DL, MVT::Other, RetOps);
 }
