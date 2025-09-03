@@ -120,10 +120,10 @@ SBFTargetLowering::SBFTargetLowering(const TargetMachine &TM,
   if (STI.getHasAlu32()) {
     setOperationAction(ISD::BSWAP, MVT::i32, Promote);
     setOperationAction(ISD::BR_CC, MVT::i32, Custom);
-    setOperationAction(ISD::CTTZ, MVT::i32, Expand);
-    setOperationAction(ISD::CTLZ, MVT::i32, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
+//    setOperationAction(ISD::CTTZ, MVT::i32, Expand);
+//    setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+//    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
+//    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
   }
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
@@ -711,32 +711,32 @@ SDValue SBFTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   if (!getHasJmpExt())
     NegateCC(LHS, RHS, CC);
 
-  bool IsSignedCmp = (CC == ISD::SETGT ||
-                      CC == ISD::SETGE ||
-                      CC == ISD::SETLT ||
-                      CC == ISD::SETLE);
-  bool Is32Num = LHS.getValueType() == MVT::i32 ||
-                 RHS.getValueType() == MVT::i32;
-
-  if (getHasAlu32() && Is32Num) {
-    if (isIntOrFPConstant(RHS) || isIntOrFPConstant(LHS)) {
-      // Immediate values are sign extended in SBF, so we sign extend the
-      // registers for a correct comparison.
-      LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, LHS);
-      RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, RHS);
-    } else if (IsSignedCmp) {
-      // If the comparison is signed, we sign extend registers
-      LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, LHS);
-      RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, RHS);
-    } else {
-      // If the comparison is unsigned, we zero extend registers
-      LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LHS);
-      RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RHS);
-    }
-  }
+//  bool IsSignedCmp = (CC == ISD::SETGT ||
+//                      CC == ISD::SETGE ||
+//                      CC == ISD::SETLT ||
+//                      CC == ISD::SETLE);
+//  bool Is32Num = LHS.getValueType() == MVT::i32 ||
+//                 RHS.getValueType() == MVT::i32;
+//
+//  if (getHasAlu32() && Is32Num) {
+//    if (isIntOrFPConstant(RHS) || isIntOrFPConstant(LHS)) {
+//      // Immediate values are sign extended in SBF, so we sign extend the
+//      // registers for a correct comparison.
+//      LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, LHS);
+//      RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, RHS);
+//    } else if (IsSignedCmp) {
+//      // If the comparison is signed, we sign extend registers
+//      LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, LHS);
+//      RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, RHS);
+//    } else {
+//      // If the comparison is unsigned, we zero extend registers
+//      LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LHS);
+//      RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RHS);
+//    }
+//  }
 
   return DAG.getNode(SBFISD::BR_CC, DL, Op.getValueType(), Chain, LHS, RHS,
-                     DAG.getConstant(CC, DL, MVT::i64), Dest);
+                     DAG.getConstant(CC, DL, LHS.getValueType()), Dest);
 }
 
 SDValue SBFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
@@ -1023,9 +1023,12 @@ SBFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   int CC = MI.getOperand(3).getImm();
   int NewCC;
   switch (CC) {
-#define SET_NEWCC(X, Y)                                                        \
-  case ISD::X:                                                                 \
-    NewCC = isSelectRROp ? SBF::Y##_rr : SBF::Y##_ri;                          \
+#define SET_NEWCC(X, Y) \
+  case ISD::X: \
+    if (is32BitCmp && HasAlu32) \
+      NewCC = isSelectRROp ? SBF::Y##_rr_32 : SBF::Y##_ri_32; \
+    else \
+      NewCC = isSelectRROp ? SBF::Y##_rr : SBF::Y##_ri; \
     break
   SET_NEWCC(SETGT, JSGT);
   SET_NEWCC(SETUGT, JUGT);
@@ -1051,13 +1054,13 @@ SBFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   // to be promoted. If we are comparing against an immediate value, we must
   // sign extend the registers. Likewise for signed comparisons. Unsigned
   // comparisons will zero extent registers.
-  if (is32BitCmp)
+  if (is32BitCmp && !HasAlu32)
     LHS = EmitSubregExt(MI, BB, LHS, isSignedCmp || !isSelectRROp);
 
   if (isSelectRROp) {
     Register RHS = MI.getOperand(2).getReg();
 
-    if (is32BitCmp)
+    if (is32BitCmp && !HasAlu32)
       RHS = EmitSubregExt(MI, BB, RHS, isSignedCmp);
 
     BuildMI(BB, DL, TII.get(NewCC)).addReg(LHS).addReg(RHS).addMBB(Copy1MBB);

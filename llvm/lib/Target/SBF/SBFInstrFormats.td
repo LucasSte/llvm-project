@@ -21,6 +21,7 @@ def SBF_ALU64 : SBFOpClass<0x7>;
 
 def SBF_LD_V2 : SBFOpClass<0x4>;
 def SBF_ST_V2 : SBFOpClass<0x7>;
+def SBF_JMP32 : SBFOpClass<0x1>;
 
 class SBFSrcType<bits<1> val> {
   bits<1> Value = val;
