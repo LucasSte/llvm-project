@@ -86,7 +86,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case x86_64:         return "x86_64";
   case xcore:          return "xcore";
   case xtensa:         return "xtensa";
-  case sbf:            return "sbf";
+  case sbf:            return "bpfel";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -394,7 +394,7 @@ static Triple::ArchType parseBPFArch(StringRef ArchName) {
              ArchName == "sbpfv0" || ArchName == "sbpfv1" ||
              ArchName == "sbpfv2" || ArchName == "sbpfv3" ||
              ArchName == "sbpfv4") {
-    return Triple::sbf;
+    return Triple::bpfel;
   } else {
     return Triple::UnknownArch;
   }
@@ -805,15 +805,15 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
         .EndsWith("v1.8", Triple::DXILSubArch_v1_8)
         .Default(Triple::NoSubArch);
 
-  if (SubArchName.starts_with("sbpf")) {
-    return StringSwitch<Triple::SubArchType>(SubArchName)
-        .EndsWith("v0", Triple::SBFSubArch_v0)
-        .EndsWith("v1", Triple::SBFSubArch_v1)
-        .EndsWith("v2", Triple::SBFSubArch_v2)
-        .EndsWith("v3", Triple::SBFSubArch_v3)
-        .EndsWith("v4", Triple::SBFSubArch_v4)
-        .Default(Triple::NoSubArch);
-  }
+//  if (SubArchName.starts_with("sbpf")) {
+//    return StringSwitch<Triple::SubArchType>(SubArchName)
+//        .EndsWith("v0", Triple::SBFSubArch_v0)
+//        .EndsWith("v1", Triple::SBFSubArch_v1)
+//        .EndsWith("v2", Triple::SBFSubArch_v2)
+//        .EndsWith("v3", Triple::SBFSubArch_v3)
+//        .EndsWith("v4", Triple::SBFSubArch_v4)
+//        .Default(Triple::NoSubArch);
+//  }
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
 
@@ -1958,7 +1958,7 @@ Triple Triple::getLittleEndianArchVariant() const {
 
   case Triple::aarch64_be: T.setArch(Triple::aarch64);  break;
   case Triple::bpfeb:      T.setArch(Triple::bpfel);    break;
-  case Triple::sbf:        T.setArch(Triple::sbf);      break;
+  case Triple::sbf:        T.setArch(Triple::bpfel);      break;
   case Triple::mips64:
     T.setArch(Triple::mips64el, getSubArch());
     break;

@@ -52,7 +52,7 @@ BPFSubtarget &BPFSubtarget::initializeSubtargetDependencies(StringRef CPU,
 }
 
 void BPFSubtarget::initializeEnvironment() {
-  HasJmpExt = false;
+  HasJmpExt = true;
   HasJmp32 = false;
   HasAlu32 = false;
   UseDwarfRIS = false;
