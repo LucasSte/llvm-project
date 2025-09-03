@@ -78,19 +78,23 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   // Set unsupported atomic operations as Custom so
   // we can emit better error messages than fatal error
   // from selectiondag.
-  for (auto VT : {MVT::i8, MVT::i16, MVT::i32}) {
-    if (VT == MVT::i32) {
-      if (STI.getHasAlu32())
-        continue;
-    } else {
-      setOperationAction(ISD::ATOMIC_LOAD_ADD, VT, Custom);
-    }
-
-    setOperationAction(ISD::ATOMIC_LOAD_AND, VT, Custom);
-    setOperationAction(ISD::ATOMIC_LOAD_OR, VT, Custom);
-    setOperationAction(ISD::ATOMIC_LOAD_XOR, VT, Custom);
+  for (auto VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+    // Implement custom lowering for all atomic operations
     setOperationAction(ISD::ATOMIC_SWAP, VT, Custom);
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Custom);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_AND, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD, VT, Expand);
+    setOperationAction(ISD::ATOMIC_STORE, VT, Expand);
   }
 
   for (auto VT : { MVT::i32, MVT::i64 }) {
@@ -280,17 +284,21 @@ void BPFTargetLowering::ReplaceNodeResults(
   switch (Opcode) {
   default:
     report_fatal_error("unhandled custom legalization: " + Twine(Opcode));
-  case ISD::ATOMIC_LOAD_ADD:
-  case ISD::ATOMIC_LOAD_AND:
-  case ISD::ATOMIC_LOAD_OR:
-  case ISD::ATOMIC_LOAD_XOR:
   case ISD::ATOMIC_SWAP:
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
-    if (HasAlu32 || Opcode == ISD::ATOMIC_LOAD_ADD)
-      Msg = "unsupported atomic operation, please use 32/64 bit version";
-    else
-      Msg = "unsupported atomic operation, please use 64 bit version";
-    break;
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_XOR:
+    // We do lowering during legalization, see LowerOperation()
+    return;
   }
 
   SDLoc DL(N);
@@ -316,8 +324,134 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSDIVSREM(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_XOR:
+    return LowerATOMICRMW(Op, DAG);
   }
 }
+
+SDValue BPFTargetLowering::LowerATOMICRMW(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  AtomicSDNode *AN = cast<AtomicSDNode>(Op);
+  assert(AN && "Expected custom lowering of an atomic load node");
+
+  SDValue Chain = AN->getChain();
+  SDValue Ptr = AN->getBasePtr();
+  EVT PtrVT = AN->getMemoryVT();
+  EVT RetVT = Op.getValueType();
+
+  // Load the current value
+  SDValue Load =
+      DAG.getExtLoad(ISD::EXTLOAD, DL, RetVT, Chain, Ptr, MachinePointerInfo(),
+                     PtrVT, AN->getAlign());
+  Chain = Load.getValue(1);
+
+  // Most ops return the current value, except CMP_SWAP_WITH_SUCCESS see below
+  SDValue Ret = Load;
+  SDValue RetFlag;
+
+  // Val contains the new value we want to set. For CMP_SWAP, Cmp contains the
+  // expected current value.
+  SDValue Cmp, Val;
+  if (AN->isCompareAndSwap()) {
+    Cmp = Op.getOperand(2);
+    Val = Op.getOperand(3);
+
+    // The Cmp value must match the pointer type
+    EVT CmpVT = Cmp->getValueType(0);
+    if (CmpVT != RetVT) {
+      Cmp = RetVT.bitsGT(CmpVT) ? DAG.getNode(ISD::SIGN_EXTEND, DL, RetVT, Cmp)
+                                : DAG.getNode(ISD::TRUNCATE, DL, RetVT, Cmp);
+    }
+  } else {
+    Val = AN->getVal();
+  }
+
+  // The new value type must match the pointer type
+  EVT ValVT = Val->getValueType(0);
+  if (ValVT != RetVT) {
+    Val = RetVT.bitsGT(ValVT) ? DAG.getNode(ISD::SIGN_EXTEND, DL, RetVT, Val)
+                              : DAG.getNode(ISD::TRUNCATE, DL, RetVT, Val);
+    ValVT = Val->getValueType(0);
+  }
+
+  SDValue NewVal;
+  switch (Op.getOpcode()) {
+  case ISD::ATOMIC_SWAP:
+    NewVal = Val;
+    break;
+  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: {
+    EVT RetFlagVT = AN->getValueType(1);
+    NewVal = DAG.getSelectCC(DL, Load, Cmp, Val, Load, ISD::SETEQ);
+    RetFlag = DAG.getSelectCC(
+        DL, Load, Cmp, DAG.getBoolConstant(true, DL, RetFlagVT, RetFlagVT),
+        DAG.getBoolConstant(false, DL, RetFlagVT, RetFlagVT), ISD::SETEQ);
+    break;
+  }
+  case ISD::ATOMIC_CMP_SWAP:
+    NewVal = DAG.getSelectCC(DL, Load, Cmp, Val, Load, ISD::SETEQ);
+    break;
+  case ISD::ATOMIC_LOAD_ADD:
+    NewVal = DAG.getNode(ISD::ADD, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_SUB:
+    NewVal = DAG.getNode(ISD::SUB, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_AND:
+    NewVal = DAG.getNode(ISD::AND, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_NAND: {
+    NewVal =
+        DAG.getNOT(DL, DAG.getNode(ISD::AND, DL, ValVT, Load, Val), ValVT);
+    break;
+  }
+  case ISD::ATOMIC_LOAD_OR:
+    NewVal = DAG.getNode(ISD::OR, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_XOR:
+    NewVal = DAG.getNode(ISD::XOR, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_MIN:
+    NewVal = DAG.getNode(ISD::SMIN, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_UMIN:
+    NewVal = DAG.getNode(ISD::UMIN, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_MAX:
+    NewVal = DAG.getNode(ISD::SMAX, DL, ValVT, Load, Val);
+    break;
+  case ISD::ATOMIC_LOAD_UMAX:
+    NewVal = DAG.getNode(ISD::UMAX, DL, ValVT, Load, Val);
+    break;
+  default:
+    llvm_unreachable("unknown atomicrmw op");
+  }
+
+  Chain =
+      DAG.getTruncStore(Chain, DL, NewVal, Ptr, MachinePointerInfo(), PtrVT);
+
+  if (RetFlag) {
+    // CMP_SWAP_WITH_SUCCESS returns {value, success, chain}
+    Ret = DAG.getMergeValues({Ret, RetFlag, Chain}, DL);
+  } else {
+    // All the other ops return {value, chain}
+    Ret = DAG.getMergeValues({Ret, Chain}, DL);
+  }
+
+  return Ret;
+}
+
 
 // Calling Convention Implementation
 #include "BPFGenCallingConv.inc"
