@@ -24,6 +24,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_REGINFO_TARGET_DESC
+#include "BPFFunctionInfo.h"
 #include "BPFGenRegisterInfo.inc"
 using namespace llvm;
 
@@ -92,7 +93,7 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   if (MI.getOpcode() == BPF::MOV_rr) {
-    int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+    int Offset = resolveInternalFrameIndex(MF, FrameIndex, std::nullopt);
 
     WarnSize(Offset, MF, DL, MBB);
     MI.getOperand(i).ChangeToRegister(FrameReg, false);
@@ -103,8 +104,7 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return false;
   }
 
-  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
-               MI.getOperand(i + 1).getImm();
+  int Offset = resolveInternalFrameIndex(MF, FrameIndex, MI.getOperand(i + 1).getImm());
 
   if (!isInt<32>(Offset))
     llvm_unreachable("bug in frame offset");
@@ -131,6 +131,33 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
   return false;
 }
+
+int BPFRegisterInfo::resolveInternalFrameIndex(
+    const llvm::MachineFunction &MF, int FI, std::optional<int64_t> Imm) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const BPFFunctionInfo *BPFFuncInfo = MF.getInfo<BPFFunctionInfo>();
+  int Offset = MFI.getObjectOffset(FI);
+  const BPFSubtarget & SubTarget = MF.getSubtarget<BPFSubtarget>();
+  uint64_t StackSize = MFI.getStackSize();
+
+  if (BPFFuncInfo->containsFrameIndex(FI)) {
+    Offset = 4096 - Offset;
+    if (static_cast<uint64_t>(Offset) < StackSize) {
+      dbgs() << "Error: A function call in method "
+             << MF.getFunction().getName()
+             << " overwrites values in the frame. Please, decrease stack usage "
+             << "or remove parameters from the call. "
+             << "The function call may cause undefined behavior "
+                "during execution.\n\n";
+    }
+    return -Offset;
+  }
+
+  Offset += Imm.value_or(0);
+
+  return Offset;
+}
+
 
 Register BPFRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return BPF::R10;

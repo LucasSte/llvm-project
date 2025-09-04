@@ -33,6 +33,9 @@ struct BPFRegisterInfo : public BPFGenRegisterInfo {
                            RegScavenger *RS = nullptr) const override;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+  int resolveInternalFrameIndex(const MachineFunction &MF, int FI,
+                                std::optional<int64_t> Imm) const;
 };
 }
 

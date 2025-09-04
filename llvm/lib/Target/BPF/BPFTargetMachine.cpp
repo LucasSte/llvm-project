@@ -13,6 +13,7 @@
 #include "BPFTargetMachine.h"
 #include "BPF.h"
 #include "BPFTargetTransformInfo.h"
+#include "BPFFunctionInfo.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -202,4 +203,11 @@ bool BPFPassConfig::addRegBankSelect() {
 bool BPFPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
   return false;
+}
+
+MachineFunctionInfo *BPFTargetMachine::createMachineFunctionInfo(
+    llvm::BumpPtrAllocator &Allocator, const llvm::Function &F,
+    const llvm::TargetSubtargetInfo *STI) const {
+  return BPFFunctionInfo::create<BPFFunctionInfo>(
+      Allocator, F, static_cast<const BPFSubtarget *>(STI));
 }

@@ -15,6 +15,7 @@
 #include "BPF.h"
 #include "BPFSubtarget.h"
 #include "BPFTargetMachine.h"
+#include "BPFFunctionInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -603,6 +604,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Walk arg assignments
   unsigned i;
   SmallVector<SDValue, 8> MemOpChain;
+  BPFFunctionInfo * BPFFuncInfo = MF.getInfo<BPFFunctionInfo>();
 
   for (i = 0; i < ArgLocs.size(); i++) {
     CCValAssign &VA = ArgLocs[i];
@@ -637,6 +639,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       int FrameIndex = MF.getFrameInfo().CreateFixedObject(
           Size, Offset, false);
+      BPFFuncInfo->storeFrameIndexArgument(FrameIndex);
       SDValue DstAddr = DAG.getFrameIndex(FrameIndex, PtrVT);
       MachinePointerInfo DstInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset);
       SDValue Store = DAG.getStore(Chain, CLI.DL, Arg, DstAddr, DstInfo);
