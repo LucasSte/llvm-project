@@ -183,13 +183,11 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     MaxLoadsPerMemcmp = 0;
   } else {
     // inline memcpy() for kernel to see explicit copy
-    unsigned CommonMaxStores =
-      STI.getSelectionDAGInfo()->getCommonMaxStoresPerMemFunc();
 
-    MaxStoresPerMemset = MaxStoresPerMemsetOptSize = CommonMaxStores;
-    MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = CommonMaxStores;
-    MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = CommonMaxStores;
-    MaxLoadsPerMemcmp = MaxLoadsPerMemcmpOptSize = CommonMaxStores;
+    MaxStoresPerMemset = MaxStoresPerMemsetOptSize = 10;
+    MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = 5;
+    MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = 5;
+    MaxLoadsPerMemcmp = MaxLoadsPerMemcmpOptSize = 4;
   }
 
   // CPU/Feature control
@@ -259,6 +257,18 @@ BPFTargetLowering::getConstraintType(StringRef Constraint) const {
   }
 
   return TargetLowering::getConstraintType(Constraint);
+}
+
+bool BPFTargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
+  if (!VT.isSimple()) {
+    return false;
+  }
+
+  if (Fast) {
+    *Fast = 1;
+  }
+  return true;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>

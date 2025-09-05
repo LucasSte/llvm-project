@@ -36,6 +36,10 @@ class BPFTargetLowering : public TargetLowering {
 public:
   explicit BPFTargetLowering(const TargetMachine &TM, const BPFSubtarget &STI);
 
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
+                                      MachineMemOperand::Flags,
+                                      unsigned *) const override;
+
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
