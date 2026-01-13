@@ -330,16 +330,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (OutputSection *sec : ctx.outputSections)
     sec->maybeCompress<ELFT>(ctx);
 
-  if (ctx.script->hasSectionsCommand)
-    ctx.script->allocateHeaders(ctx.mainPart->phdrs);
 
-  // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
-  // 0 sized region. This has to be done late since only after assignAddresses
-  // we know the size of the sections.
-  for (Partition &part : ctx.partitions)
-    removeEmptyPTLoad(ctx, part.phdrs);
-  ctx.out.programHeaders->size =
-        sizeof(Elf_Phdr) * ctx.mainPart->phdrs.size();
 
   if (!ctx.arg.oFormatBinary)
     assignFileOffsets();
@@ -2151,6 +2142,18 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     addArmInputSectionMappingSymbols(ctx);
     sortArmMappingSymbols(ctx);
   }
+
+  if (ctx.script->hasSectionsCommand)
+    ctx.script->allocateHeaders(ctx.mainPart->phdrs);
+
+  // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
+  // 0 sized region. This has to be done late since only after assignAddresses
+  // we know the size of the sections.
+  for (Partition &part : ctx.partitions)
+    removeEmptyPTLoad(ctx, part.phdrs);
+  ctx.out.programHeaders->size =
+        sizeof(Elf_Phdr) * ctx.mainPart->phdrs.size();
+  finalizeAddressDependentContent();
 }
 
 // Ensure data sections are not mixed with executable sections when
