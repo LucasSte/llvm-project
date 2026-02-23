@@ -129,7 +129,7 @@ void SBFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 void SBFPassConfig::addIRPasses() {
   addPass(createSBFCheckAndAdjustIR());
-  TargetPassConfig::addIRPasses();
+  //TargetPassConfig::addIRPasses();
 }
 
 TargetTransformInfo

@@ -636,7 +636,7 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createLICMPass());
   }
 
-  TargetPassConfig::addIRPasses();
+  //TargetPassConfig::addIRPasses();
 
   if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSelectOpt)
     addPass(createSelectOptimizePass());
