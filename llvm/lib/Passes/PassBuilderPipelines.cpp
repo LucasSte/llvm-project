@@ -410,7 +410,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                                    ThinOrFullLTOPhase Phase) {
 
   FunctionPassManager FPM;
-  return FPM;
+  //return FPM;
 
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
@@ -779,6 +779,7 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
                                       OptimizationLevel Level,
                                       ThinOrFullLTOPhase LTOPhase) {
   assert(Level != OptimizationLevel::O0 && "Not expecting O0 here!");
+  return;
   if (DisablePreInliner)
     return;
   InlineParams IP;
