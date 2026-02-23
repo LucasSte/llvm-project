@@ -119,11 +119,11 @@ void SBFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
   PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
                                     OptimizationLevel Level) {
-    FPM.addPass(ExpandMemCmpPass(this));
+    /*FPM.addPass(ExpandMemCmpPass(this));
     FPM.addPass(InstCombinePass());
     FPM.addPass(SimplifyCFGPass(
         SimplifyCFGOptions().hoistCommonInsts(true).convertSwitchToLookupTable(
-            true)));
+            true)));*/
   });
 }
 
