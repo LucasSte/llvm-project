@@ -550,12 +550,14 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                                  ThinOrFullLTOPhase Phase) {
   assert(Level != OptimizationLevel::O0 && "Must request optimizations!");
 
+  FunctionPassManager FPM;
+  return FPM;
+  
   // The O1 pipeline has a separate pipeline creation function to simplify
   // construction readability.
   if (Level.getSpeedupLevel() == 1)
     return buildO1FunctionSimplificationPipeline(Level, Phase);
 
-  FunctionPassManager FPM;
 
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
