@@ -410,6 +410,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                                    ThinOrFullLTOPhase Phase) {
 
   FunctionPassManager FPM;
+  return FPM;
 
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
@@ -778,6 +779,7 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
                                       OptimizationLevel Level,
                                       ThinOrFullLTOPhase LTOPhase) {
   assert(Level != OptimizationLevel::O0 && "Not expecting O0 here!");
+  return;
   if (DisablePreInliner)
     return;
   InlineParams IP;
@@ -1273,6 +1275,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 /// TODO: Should LTO cause any differences to this set of passes?
 void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   FunctionPassManager &FPM, bool IsFullLTO) {
+  return;
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
@@ -1818,6 +1821,7 @@ ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                      ModuleSummaryIndex *ExportSummary) {
   ModulePassManager MPM;
+  return MPM;
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
