@@ -596,34 +596,34 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   // Expand any SVE vector library calls that we can't code generate directly.
-  if (EnableSVEIntrinsicOpts &&
+  /*if (EnableSVEIntrinsicOpts &&
       TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSVEIntrinsicOptsPass());
+    addPass(createSVEIntrinsicOptsPass());*/
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
-  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAtomicTidy)
+  /*if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass(SimplifyCFGOptions()
                                             .forwardSwitchCondToPhi(true)
                                             .convertSwitchRangeToICmp(true)
                                             .convertSwitchToLookupTable(true)
                                             .needCanonicalLoops(false)
                                             .hoistCommonInsts(true)
-                                            .sinkCommonInsts(true)));
+                                            .sinkCommonInsts(true)));*/
 
   // Run LoopDataPrefetch
   //
   // Run this before LSR to remove the multiplies involved in computing the
   // pointer values N iterations ahead.
-  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+  /*if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoopDataPrefetch)
       addPass(createLoopDataPrefetchPass());
     if (EnableFalkorHWPFFix)
       addPass(createFalkorMarkStridedAccessesPass());
-  }
+  }*/
 
-  if (EnableGEPOpt) {
+  /*if (EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
     // multiple GEPs with single index.
@@ -634,25 +634,25 @@ void AArch64PassConfig::addIRPasses() {
     // Do loop invariant code motion in case part of the lowered result is
     // invariant.
     addPass(createLICMPass());
-  }
+  }*/
 
   //TargetPassConfig::addIRPasses();
 
-  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSelectOpt)
-    addPass(createSelectOptimizePass());
+  //if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSelectOpt)
+  //  addPass(createSelectOptimizePass());
 
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
   // Match complex arithmetic patterns
-  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
-    addPass(createComplexDeinterleavingPass(TM));
+  //if (TM->getOptLevel() >= CodeGenOptLevel::Default)
+  //  addPass(createComplexDeinterleavingPass(TM));
 
   // Match interleaved memory accesses to ldN/stN intrinsics.
-  if (TM->getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createInterleavedLoadCombinePass());
-    addPass(createInterleavedAccessPass());
-  }
+  //if (TM->getOptLevel() != CodeGenOptLevel::None) {
+  //  addPass(createInterleavedLoadCombinePass());
+  //  addPass(createInterleavedAccessPass());
+  //}
 
   // Expand any functions marked with SME attributes which require special
   // changes for the calling convention or that require the lazy-saving
