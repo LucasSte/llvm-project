@@ -410,7 +410,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                                    ThinOrFullLTOPhase Phase) {
 
   FunctionPassManager FPM;
-  //return FPM;
+  return FPM;
 
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());

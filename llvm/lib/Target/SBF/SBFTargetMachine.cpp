@@ -111,11 +111,11 @@ void SBFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
-        FunctionPassManager FPM;
-        FPM.addPass(SBFAbstractMemberAccessPass(this));
-        FPM.addPass(SBFPreserveDITypePass());
-        FPM.addPass(SBFIRPeepholePass());
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        // FunctionPassManager FPM;
+        //FPM.addPass(SBFAbstractMemberAccessPass(this));
+        //FPM.addPass(SBFPreserveDITypePass());
+        //FPM.addPass(SBFIRPeepholePass());
+        // MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
   PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
                                     OptimizationLevel Level) {
