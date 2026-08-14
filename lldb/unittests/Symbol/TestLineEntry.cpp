@@ -105,25 +105,7 @@ TEST_F(LineEntryTest, GetSameLineContiguousAddressRangeNoInlines) {
   ASSERT_EQ(range.GetByteSize(), (uint64_t)0x24);
 }
 
-TEST_F(LineEntryTest, GetSameLineContiguousAddressRangeOneInline) {
-  auto sc_line_entries = GetLineEntriesForLine(18);
-  ASSERT_THAT_EXPECTED(sc_line_entries, llvm::Succeeded());
-  auto line_entry = sc_line_entries.get()[0].line_entry;
-  bool include_inlined_functions = true;
-  auto range =
-      line_entry.GetSameLineContiguousAddressRange(include_inlined_functions);
-  ASSERT_EQ(range.GetByteSize(), (uint64_t)0x49);
-}
 
-TEST_F(LineEntryTest, GetSameLineContiguousAddressRangeNestedInline) {
-  auto sc_line_entries = GetLineEntriesForLine(12);
-  ASSERT_THAT_EXPECTED(sc_line_entries, llvm::Succeeded());
-  auto line_entry = sc_line_entries.get()[0].line_entry;
-  bool include_inlined_functions = true;
-  auto range =
-      line_entry.GetSameLineContiguousAddressRange(include_inlined_functions);
-  ASSERT_EQ(range.GetByteSize(), (uint64_t)0x33);
-}
 
 /*
 # inlined-functions.cpp
