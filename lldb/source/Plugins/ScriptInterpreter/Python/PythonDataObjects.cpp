@@ -74,7 +74,7 @@ static bool python_is_finalizing() {
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
   return _Py_Finalizing != nullptr;
 #else
-  return _Py_IsFinalizing();
+  return Py_IsFinalizing();
 #endif
 }
 
